@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="show_password">Lihat Password</string>
+    <string name="hide_password">Sembunyikan Password</string>
+    <string name="home_text_tm">Pasien sehat, dokter pun lega, harapan hidup semakin terjaga.\n#MEDIS GO BERSAMA KITA SEHAT</string>
+    <string name="home_text_client">Kami siap membantu Anda mendapatkan layanan medis profesional di mana pun Anda berada. Pilih dokter spesialis, perawat, bidan, fisioterapi dan rasakan kenyamanan perawatan langsung di rumah Anda.</string>
+    <string name="button_lihat_antrian">LIHAT ANTRIAN</string>
+    <string name="button_buat_janji">YU BUAT JANJI</string>
+</resources>
