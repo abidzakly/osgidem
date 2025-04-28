@@ -24,9 +24,10 @@ import org.d3ifcool.medisgosh.util.ResponseStatus
 fun AppTopBar(
     modifier: Modifier = Modifier,
     imageUrl: String,
+    hideUserPicture: Boolean = false,
     state: ResponseStatus,
-    onStateChange: (ResponseStatus) -> Unit,
-    onProfileClicked: () -> Unit,
+    onStateChange: (ResponseStatus) -> Unit = {},
+    onProfileClicked: () -> Unit = {},
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -38,44 +39,45 @@ fun AppTopBar(
             imageVector = ImageVector.vectorResource(id = R.drawable.app_logo_default),
             contentDescription = null
         )
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .clickable {
-                    onProfileClicked()
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            if (imageUrl.isEmpty() || state == ResponseStatus.FAILED) {
-                Image(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape),
-                    imageVector = ImageVector.vectorResource(id = R.drawable.account_circle),
-                    contentDescription = null
-                )
-            } else {
-                if (state == ResponseStatus.LOADING) {
-                    AppCircularLoading(color = Color.Black, size = 30.dp)
-                }
-                AsyncImage(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape),
-                    model = imageUrl,
-                    contentDescription = "User's Profile Photo",
-                    onLoading = {
-                        onStateChange(ResponseStatus.LOADING)
+        if (!hideUserPicture)
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        onProfileClicked()
                     },
-                    onError = {
-                        onStateChange(ResponseStatus.FAILED)
-                    },
-                    onSuccess = {
-                        onStateChange(ResponseStatus.SUCCESS)
+                contentAlignment = Alignment.Center
+            ) {
+                if (imageUrl.isEmpty() || state == ResponseStatus.FAILED) {
+                    Image(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape),
+                        imageVector = ImageVector.vectorResource(id = R.drawable.account_circle),
+                        contentDescription = null
+                    )
+                } else {
+                    if (state == ResponseStatus.LOADING) {
+                        AppCircularLoading(color = Color.Black, size = 30.dp)
                     }
-                )
+                    AsyncImage(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape),
+                        model = imageUrl,
+                        contentDescription = "User's Profile Photo",
+                        onLoading = {
+                            onStateChange(ResponseStatus.LOADING)
+                        },
+                        onError = {
+                            onStateChange(ResponseStatus.FAILED)
+                        },
+                        onSuccess = {
+                            onStateChange(ResponseStatus.SUCCESS)
+                        }
+                    )
+                }
             }
-        }
     }
 }

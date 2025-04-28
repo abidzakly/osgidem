@@ -62,30 +62,53 @@ class UserRepository(
 
     suspend fun editProfile(
         user: User,
+        image: ByteArray? = null
     ): ResponseStatus {
         return try {
-            val profileUpdates = userProfileChangeRequest {
-                displayName = user.name
-            }
-            try {
-                auth.currentUser?.updateProfile(profileUpdates)?.await()
-            } catch (e: Exception) {
-                Log.e("Repo", "Error: ${e.message}", e)
-                Log.e("UserRepository", "Error: ${e.message}", e)
-                ResponseStatus.FAILED.apply {
-                    updateMessage("Failed: ${e.message}")
+            var downloadUrl: String? = null
+
+            // Upload image
+            if (image != null) {
+                val storageRef = storage.reference.child(
+                    "${User.COLLECTION}/${auth.currentUser?.uid ?: "unknown"}/profile/${AppHelper.getShortUUID()}.jpeg"
+                )
+
+                storageRef.putBytes(image).await()
+                downloadUrl = storageRef.downloadUrl.await().toString()
+
+                // Delete old profile picture if it exists
+                auth.currentUser?.photoUrl?.let { uri ->
+                    try {
+                        val photoUrl = uri.toString()
+                        val path =
+                            photoUrl.substringAfter("/o/").substringBefore("?").replace("%2F", "/")
+                        storage.reference.child(path).delete().await()
+                    } catch (e: Exception) {
+                        Log.e("Repo", "Failed to delete old image: ${e.message}", e)
+                    }
                 }
+
+                // Update Firebase Auth profile
+                val profileUpdates = userProfileChangeRequest {
+                    displayName = user.name
+                    photoUri = Uri.parse(downloadUrl)
+                }
+
+                auth.currentUser?.updateProfile(profileUpdates)?.await()
             }
+            // Prepare and store user metadata
             val userMetadata = user.copy(
-                name = auth.currentUser!!.displayName!!,
-                email = auth.currentUser!!.email!!,
-                photoUrl = auth.currentUser?.photoUrl?.toString(),
-                id = auth.currentUser!!.uid
+                photoUrl = downloadUrl,
+                hasDoneOnboarding = true,
             )
-            db.collection(User.COLLECTION).document(auth.currentUser!!.uid).set(userMetadata)
+
+            db.collection(User.COLLECTION)
+                .document(auth.currentUser!!.uid)
+                .set(userMetadata)
                 .await()
+
             ResponseStatus.SUCCESS.apply {
-                updateMessage("Success!")
+                updateMessage("Data baru telah disimpan")
             }
         } catch (e: Exception) {
             Log.e("Repo", "Error: ${e.message}", e)
@@ -147,7 +170,8 @@ class UserRepository(
                         name = username,
                         email = user.email,
                         photoUrl = user.photoUrl?.toString(),
-                        role = User.CLIENT_ROLE
+                        role = User.CLIENT_ROLE,
+                        hasDoneOnboarding = false,
                     )
 
                     db.collection(User.COLLECTION)
@@ -286,7 +310,8 @@ class UserRepository(
                     name = user.displayName,
                     email = user.email,
                     photoUrl = user.photoUrl?.toString(),
-                    role = if (isEmployee) User.EMPLOYEE_ROLE else User.CLIENT_ROLE
+                    role = if (isEmployee) User.EMPLOYEE_ROLE else User.CLIENT_ROLE,
+                    hasDoneOnboarding = false,
                 )
 
                 db.collection(User.COLLECTION)

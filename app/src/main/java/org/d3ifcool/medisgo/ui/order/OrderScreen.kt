@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,19 +28,11 @@ import androidx.compose.material3.ButtonDefaults.buttonColors
 import androidx.compose.material3.CardDefaults.outlinedCardColors
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -63,12 +53,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.canhub.cropper.CropImageContract
-import com.canhub.cropper.CropImageContractOptions
-import com.canhub.cropper.CropImageOptions
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -78,30 +67,28 @@ import org.d3ifcool.medisgosh.component.AppContainer
 import org.d3ifcool.medisgosh.component.AppLabel
 import org.d3ifcool.medisgosh.component.AppPopUp
 import org.d3ifcool.medisgosh.component.AppText
+import org.d3ifcool.medisgosh.component.AppTopBar
 import org.d3ifcool.medisgosh.model.Order
 import org.d3ifcool.medisgosh.navigation.Screen
-import org.d3ifcool.medisgosh.ui.theme.AppBlue2Color
 import org.d3ifcool.medisgosh.ui.theme.AppBlueColor
-import org.d3ifcool.medisgosh.ui.theme.AppDanger
 import org.d3ifcool.medisgosh.ui.theme.AppDarkBlueColor
-import org.d3ifcool.medisgosh.ui.theme.AppDarkToscaColor
 import org.d3ifcool.medisgosh.ui.theme.AppGrayColor
 import org.d3ifcool.medisgosh.ui.theme.AppMediumLightBlueColor
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
-import org.d3ifcool.medisgosh.ui.theme.AppWarning
 import org.d3ifcool.medisgosh.ui.theme.BackButton
-import org.d3ifcool.medisgosh.ui.theme.PembayaranColor
 import org.d3ifcool.medisgosh.util.AppHelper
 import org.d3ifcool.medisgosh.util.FlashMessageHelper
 import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
-import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.util.MediaUtils
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderScreen(
     modifier: Modifier = Modifier,
     user: FirebaseUser?,
+    topPadding: Dp,
+    bottomPadding: Dp,
     navController: NavHostController,
     viewModel: OrderViewModel,
 ) {
@@ -124,6 +111,7 @@ fun OrderScreen(
             isRefreshing = false
         }
     }
+    var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
 
     LaunchedEffect(selectedTabIndex) {
         viewModel.filterData(selectedTabIndex)
@@ -178,17 +166,13 @@ fun OrderScreen(
         )
     }
 
-    AppContainer.WithTopBar(
+    AppContainer.Default(
         snackbarHost = {
             FlashMessageHelper.FlashMessageHost(
                 snackbarHostState,
             )
         },
         modifier = modifier,
-        profileImageUrl = user?.photoUrl.toString(),
-        onProfileClick = {
-            AppHelper.navigate(navController, Screen.General.Profile.route)
-        },
     ) { innerPadding ->
         PullToRefreshBox(
             modifier = Modifier
@@ -198,11 +182,22 @@ fun OrderScreen(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
         ) {
-            Column(
+            LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top,
             ) {
+                item {
+                    AppTopBar(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        imageUrl = user?.photoUrl.toString(),
+                        state = imageLoadStatus,
+                        onStateChange = { imageLoadStatus = it }
+                    ) {
+                        AppHelper.navigate(navController, Screen.General.Profile.route)
+                    }
+                }
+                item {
                 Spacer(Modifier.height(30.dp))
                 AppText.Semi20(
                     text = "Pesanan Saya",
@@ -210,110 +205,127 @@ fun OrderScreen(
                     color = AppGrayColor
                 )
                 Spacer(Modifier.height(12.dp))
-                TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .padding(horizontal = 40.dp),
-                    containerColor = Color.Transparent,
-                    indicator =
-                    { tabPositions ->
-                        if (selectedTabIndex < tabPositions.size) {
-                            TabRowDefaults.SecondaryIndicator(
-                                Modifier.tabIndicatorOffset(
-                                    tabPositions[selectedTabIndex]
-                                ),
-                                color = AppBlueColor
-                            )
-                        }
-                    },
-                    divider = {
-                        HorizontalDivider(
-                            color = Color.Transparent
-                        )
-                    }
-                ) {
-                    Tab(
-                        selected = selectedTabIndex == 0,
-                        onClick = { selectedTabIndex = 0 },
-                        text = {
-                            AppText.Regular16(
-                                modifier = Modifier.fillMaxWidth(),
-                                text = "Belum dibayar",
-                                color = if (selectedTabIndex == 0) AppBlueColor else AppGrayColor,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Center
-                            )
-                        },
-                        selectedContentColor = AppBlueColor
-                    )
-                    Tab(
-                        selected = selectedTabIndex == 1,
-                        onClick = { selectedTabIndex = 1 },
-                        text = {
-                            AppText.Regular16(
-                                modifier = Modifier.fillMaxWidth(),
-                                text = "Sedang Dilayani",
-                                color = if (selectedTabIndex == 1) AppBlueColor else AppGrayColor,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Center
-                            )
-                        },
-                        selectedContentColor = AppBlueColor
-                    )
-                    Tab(
-                        selected = selectedTabIndex == 2,
-                        onClick = { selectedTabIndex = 2 },
-                        text = {
-                            AppText.Regular16(
-                                modifier = Modifier.fillMaxWidth(),
-                                text = "Selesai",
-                                color = if (selectedTabIndex == 2) AppBlueColor else AppGrayColor,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Center
-
-                            )
-                        },
-                        selectedContentColor = AppBlueColor
-                    )
-                }
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = if (fetchStatus == ResponseStatus.SUCCESS && !fetchedData.isNullOrEmpty()) Arrangement.Top else Arrangement.Center,
-                    contentPadding = PaddingValues(bottom = 86.dp, top = 16.dp)
-                ) {
-                    when (fetchStatus) {
-                        ResponseStatus.LOADING -> {
-                            item {
-                                AppCircularLoading(
-                                    color = AppDarkBlueColor,
-                                    size = 30.dp,
-                                    useSpacer = false
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .padding(horizontal = 40.dp),
+                        containerColor = Color.Transparent,
+                        indicator =
+                        { tabPositions ->
+                            if (selectedTabIndex < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(
+                                        tabPositions[selectedTabIndex]
+                                    ),
+                                    color = AppBlueColor
                                 )
                             }
+                        },
+                        divider = {
+                            HorizontalDivider(
+                                color = Color.Transparent
+                            )
                         }
+                    ) {
+                        Tab(
+                            selected = selectedTabIndex == 0,
+                            onClick = { selectedTabIndex = 0 },
+                            text = {
+                                AppText.Regular16(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    text = "Belum dibayar",
+                                    color = if (selectedTabIndex == 0) AppBlueColor else AppGrayColor,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            selectedContentColor = AppBlueColor
+                        )
+                        Tab(
+                            selected = selectedTabIndex == 1,
+                            onClick = { selectedTabIndex = 1 },
+                            text = {
+                                AppText.Regular16(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    text = "Sedang Dilayani",
+                                    color = if (selectedTabIndex == 1) AppBlueColor else AppGrayColor,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            selectedContentColor = AppBlueColor
+                        )
+                        Tab(
+                            selected = selectedTabIndex == 2,
+                            onClick = { selectedTabIndex = 2 },
+                            text = {
+                                AppText.Regular16(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    text = "Selesai",
+                                    color = if (selectedTabIndex == 2) AppBlueColor else AppGrayColor,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
 
-                        ResponseStatus.SUCCESS -> {
-                            if (!fetchedData.isNullOrEmpty()) {
-                                items(fetchedData!!) {
-                                    Box(
-                                        modifier = Modifier.padding(24.dp)
-                                    ) {
-                                        OrderCard(
-                                            order = it,
-                                            submissionStatus = submissionStatus,
-                                            onCancelOrder = {
-                                                selectedOrder = it
-                                                showCancelDialog = true
-                                            },
-                                            onSubmitPayment = { bitmap ->
-                                                viewModel.submitPayment(it)
-                                            },
+                                )
+                            },
+                            selectedContentColor = AppBlueColor
+                        )
+                    }
+                }
+                item {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().height(600.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = if (fetchStatus == ResponseStatus.SUCCESS && !fetchedData.isNullOrEmpty()) Arrangement.Top else Arrangement.Center,
+                        contentPadding = PaddingValues(bottom = 86.dp, top = 16.dp)
+                    ) {
+                        when (fetchStatus) {
+                            ResponseStatus.LOADING -> {
+                                item {
+                                    AppCircularLoading(
+                                        color = AppDarkBlueColor,
+                                        size = 30.dp,
+                                        useSpacer = false
+                                    )
+                                }
+                            }
+
+                            ResponseStatus.SUCCESS -> {
+                                if (!fetchedData.isNullOrEmpty()) {
+                                    items(fetchedData!!) {
+                                        Box(
+                                            modifier = Modifier.padding(24.dp)
+                                        ) {
+                                            OrderCard(
+                                                order = it,
+                                                submissionStatus = submissionStatus,
+                                                onCancelOrder = {
+                                                    selectedOrder = it
+                                                    showCancelDialog = true
+                                                },
+                                                onSubmitPayment = { bitmap ->
+                                                    viewModel.submitPayment(it)
+                                                },
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    item {
+                                        Image(
+                                            painter = painterResource(R.drawable.order_empty_illustration),
+                                            contentDescription = null,
+                                        )
+                                        Spacer(Modifier.height(52.dp))
+                                        AppText.Large24(
+                                            text = "Belum ada Antrian",
+                                            fontWeight = FontWeight.Medium
                                         )
                                     }
                                 }
-                            } else {
+                            }
+
+                            ResponseStatus.FAILED -> {
                                 item {
                                     Image(
                                         painter = painterResource(R.drawable.order_empty_illustration),
@@ -326,24 +338,13 @@ fun OrderScreen(
                                     )
                                 }
                             }
-                        }
 
-                        ResponseStatus.FAILED -> {
-                            item {
-                                Image(
-                                    painter = painterResource(R.drawable.order_empty_illustration),
-                                    contentDescription = null,
-                                )
-                                Spacer(Modifier.height(52.dp))
-                                AppText.Large24(
-                                    text = "Belum ada Antrian",
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
+                            else -> null
                         }
-
-                        else -> null
                     }
+                }
+                item {
+                    Spacer(Modifier.height(bottomPadding))
                 }
             }
         }

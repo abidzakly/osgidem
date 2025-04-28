@@ -150,7 +150,7 @@ class AppContainer {
                                     AppHelper.openWhatsAppWithTemplate(
                                         context = test,
                                         phoneNumber = "+6285723375324",
-                                        message = "Hello, I would like to inquire about your services!"
+                                        message = "Halo, saya ingin bertanya tentang layanan Anda!"
                                     )
                                 },
                                 containerColor = Color.Green,

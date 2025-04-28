@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,6 +23,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.d3ifcool.medisgosh.R
+import org.d3ifcool.medisgosh.ui.theme.AppBrightRed
 import org.d3ifcool.medisgosh.ui.theme.AppGrayColor
 import org.d3ifcool.medisgosh.ui.theme.AppTypography
 
@@ -182,9 +185,10 @@ class AppInput {
             imeAction: ImeAction = ImeAction.Default,
             shape: Shape? = null,
             isError: Boolean = false,
+            isRequired: Boolean = false,
             enabled: Boolean = true,
             readOnly: Boolean = false,
-            testTag: String,
+            testTag: String = "",
             prefix: @Composable() (() -> Unit)? = null,
             suffix: @Composable() (() -> Unit)? = null,
             leadingIcon: @Composable() (() -> Unit)? = null,
@@ -194,14 +198,21 @@ class AppInput {
             var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
             Column {
-                AppText.Small15(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 4.dp),
-                    text = label,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.SemiBold
-                )
+                        .padding(bottom = 4.dp), verticalAlignment = Alignment.Top
+                ) {
+                    AppText.Small15(
+                        text = label,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (isRequired) {
+                        Spacer(Modifier.width(4.dp))
+                        Text("*", color = AppBrightRed, fontSize = 12.sp)
+                    }
+                }
                 TextField(
                     prefix = if (prefix != null) {
                         { prefix() }
@@ -296,6 +307,7 @@ class AppInput {
             colors: TextFieldColors? = null,
             shape: Shape? = null,
             isError: Boolean = false,
+            isRequired: Boolean = false,
             readOnly: Boolean = false,
             testTag: String,
             onValueChange: (String) -> Unit
@@ -313,14 +325,21 @@ class AppInput {
             }
             Column {
                 if (useLabel) {
-                    AppText.Small15(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 4.dp),
-                        text = label,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                            .padding(bottom = 4.dp),verticalAlignment = Alignment.Top
+                    ) {
+                        AppText.Small15(
+                            text = label,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (isRequired) {
+                            Spacer(Modifier.width(4.dp))
+                            Text("*", color = AppBrightRed, fontSize = 12.sp)
+                        }
+                    }
                 }
                 Box(
                     modifier = Modifier
@@ -388,7 +407,8 @@ class AppInput {
         @Composable
         fun Dropdown(
             label: String? = null,
-            testTag: String,
+            testTag: String = "",
+            isRequired: Boolean = false,
             dropdownItems: List<String>,
             modifier: Modifier = Modifier,
             initialValue: String,
@@ -396,24 +416,27 @@ class AppInput {
             onItemSelected: (String) -> Unit
         ) {
             var expanded by remember { mutableStateOf(false) }
-            var selectedItem by remember { mutableStateOf(initialValue.ifEmpty { placeHolder }) }
-
-            LaunchedEffect(initialValue) {
-                selectedItem = initialValue
-            }
 
             Box(modifier = modifier) {
                 // The trigger for the dropdown
                 Column {
                     if (label != null) {
-                        AppText.Small15(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 4.dp),
-                            text = label,
-                            color = Color.Gray,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            AppText.Small15(
+                                text = label,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (isRequired) {
+                                Spacer(Modifier.width(4.dp))
+                                Text("*", color = AppBrightRed, fontSize = 12.sp)
+                            }
+                        }
                     }
                     Row(
                         modifier = Modifier
@@ -422,13 +445,12 @@ class AppInput {
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { expanded = true }
                             .background(Color.White)
-                            .padding(18.dp)
-                        ,
+                            .padding(18.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         AppText.Small15(
-                            text = selectedItem,
+                            text = initialValue.ifEmpty { placeHolder },
                             color = if (initialValue.isEmpty()) Color.Gray.copy(alpha = .8f) else Color.Black
                         )
                         Icon(
@@ -450,7 +472,6 @@ class AppInput {
                             modifier = Modifier.fillMaxWidth(),
                             text = { AppText.Small15(text = item) },
                             onClick = {
-                                selectedItem = item
                                 onItemSelected(item)
                                 expanded = false
                             }
@@ -477,9 +498,10 @@ class AppInput {
             imeAction: ImeAction = ImeAction.Next,
             shape: Shape? = null,
             isError: Boolean = false,
+            isRequired: Boolean = false,
             enabled: Boolean = true,
             readOnly: Boolean = false,
-            testTag: String,
+            testTag: String = "",
             prefix: @Composable() (() -> Unit)? = null,
             suffix: @Composable() (() -> Unit)? = null,
             leadingIcon: @Composable() (() -> Unit)? = null,
@@ -487,14 +509,22 @@ class AppInput {
             onValueChange: (String) -> Unit
         ) {
             Column {
-                AppText.Small15(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 4.dp),
-                    text = label,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.SemiBold
-                )
+                    verticalAlignment = Alignment.Top
+                ) {
+                    AppText.Small15(
+                        text = label,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (isRequired) {
+                        Spacer(Modifier.width(4.dp))
+                        Text("*", color = AppBrightRed, fontSize = 12.sp)
+                    }
+                }
                 TextField(
                     prefix = if (prefix != null) {
                         { prefix() }
@@ -539,7 +569,10 @@ class AppInput {
                         errorPlaceholderColor = containerColor?.copy(alpha = .7f)
                             ?: Color.White.copy(alpha = .7f),
                     ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = imeAction),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = imeAction
+                    ),
                     keyboardActions = keyboardActions,
                     leadingIcon = if (leadingIcon != null) {
                         { leadingIcon() }

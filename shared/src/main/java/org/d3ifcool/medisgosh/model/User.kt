@@ -11,6 +11,7 @@ data class User(
     val role: String? = null,
     val employeeData: Employee? = null,
     val id: String? = null,
+    val hasDoneOnboarding: Boolean? = false,
 ) {
     constructor() : this( null)
 

@@ -30,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.canhub.cropper.CropImageContract
@@ -66,6 +68,8 @@ import org.d3ifcool.medisgosh.component.AppText
 import org.d3ifcool.medisgosh.component.ImageDialog
 import org.d3ifcool.medisgosh.ui.theme.AppDanger
 import org.d3ifcool.medisgosh.ui.theme.AppLightBlueColor
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
 import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.util.MediaUtils
 
@@ -73,11 +77,14 @@ import org.d3ifcool.medisgosh.util.MediaUtils
 @Composable
 fun ProfilePrefixComponent(
     modifier: Modifier = Modifier,
+    topPadding: Dp = 0.dp,
+    bottomPadding: Dp = 0.dp,
     user: FirebaseUser?,
+    snackbarHostState: SnackbarHostState = rememberSnackbarHostState(),
     onSelectedImage: (ByteArray?) -> Unit,
     onRefreshParams: () -> Unit,
     onLogout: () -> Unit = {},
-    contentBody: @Composable () -> Unit
+    contentBody: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
@@ -172,7 +179,8 @@ fun ProfilePrefixComponent(
                                     null, CropImageOptions(
                                         imageSourceIncludeGallery = true,
                                         imageSourceIncludeCamera = false,
-                                        fixAspectRatio = true
+                                        fixAspectRatio = true,
+                                        outputCompressQuality = 50,
                                     )
                                 )
                                 launcher.launch(options)
@@ -229,8 +237,12 @@ fun ProfilePrefixComponent(
     }
 
     AppContainer.Default(
-        modifier = modifier
-        ,
+        snackbarHost = {
+            FlashMessageHelper.FlashMessageHost(
+                snackbarHostState,
+            )
+        },
+        modifier = modifier,
     ) { innerPadding ->
         PullToRefreshBox(
             modifier = Modifier
@@ -250,6 +262,7 @@ fun ProfilePrefixComponent(
                 contentPadding = PaddingValues(bottom = 36.dp)
             ) {
                 item {
+                    Spacer(Modifier.height(topPadding))
                     IconButton(
                         modifier = Modifier.size(100.dp),
                         onClick = {
@@ -330,6 +343,7 @@ fun ProfilePrefixComponent(
                             )
                         }
                     }
+                    Spacer(Modifier.height(bottomPadding))
                 }
             }
         }

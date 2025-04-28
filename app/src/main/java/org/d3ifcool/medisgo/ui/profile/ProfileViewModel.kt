@@ -1,5 +1,6 @@
 package org.d3ifcool.medisgo.ui.profile
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -9,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.model.User
 import org.d3ifcool.medisgosh.repository.UserRepository
+import org.d3ifcool.medisgosh.util.MediaUtils
 
 
 class ProfileViewModel(
@@ -53,10 +55,11 @@ class ProfileViewModel(
         }
     }
 
-    fun editProfile(user: User) {
+    fun editProfile(user: User, bitmap: Bitmap? = null) {
         submissionStatus.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
-            submissionStatus.value = userRepository.editProfile(user)
+            submissionStatus.value =
+                userRepository.editProfile(user, bitmap?.let { MediaUtils.bitmapToByteArray(it) })
         }
     }
 

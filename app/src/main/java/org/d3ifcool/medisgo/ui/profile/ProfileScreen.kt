@@ -19,7 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.google.firebase.auth.FirebaseUser
 import org.d3ifcool.medisgosh.component.AppCircularLoading
 import org.d3ifcool.medisgosh.component.AppInput
@@ -27,13 +29,19 @@ import org.d3ifcool.medisgosh.component.AppText
 import org.d3ifcool.medisgosh.model.User
 import org.d3ifcool.medisgosh.ui.profile.ProfilePrefixComponent
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
-import org.d3ifcool.medisgosh.util.AppHelper
 import org.d3ifcool.medisgosh.util.FlashMessageHelper
 import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
 import org.d3ifcool.medisgosh.util.ResponseStatus
 
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel: ProfileViewModel) {
+fun ProfileScreen(
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
+    user: FirebaseUser?,
+    viewModel: ProfileViewModel,
+    topPadding: Dp,
+    bottomPadding: Dp,
+) {
     val context = LocalContext.current
 
     val submissionStatus by viewModel.submissionStatus
@@ -57,7 +65,6 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
 
     LaunchedEffect(submissionStatus) {
         when (submissionStatus) {
-
             ResponseStatus.SUCCESS -> {
                 FlashMessageHelper.showSuccess(
                     snackbarHostState, coroutineScope,
@@ -73,6 +80,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
                 )
                 viewModel.resetStatus()
             }
+
             else -> null
         }
     }
@@ -86,133 +94,148 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
             contact = profileData?.phoneNumber ?: ""
         }
     }
-
-    ProfilePrefixComponent(
-        modifier = modifier,
-        user = user,
-        onSelectedImage = {
-            viewModel.changeProfilePicture(it!!)
-        },
-        onRefreshParams = {
-            viewModel.observeProfileData()
-        },
-        onLogout = {
-            viewModel.logout()
-        }
-    ) {
-        AppInput.WithLabel(
-            imeAction = ImeAction.Next,
-            label = "Name",
-            value = name,
-            testTag = "nameField",
-            placeHolder = "Your Name",
-            placeHolderColor = Color.Gray.copy(alpha = .8f),
+    if (profileData?.hasDoneOnboarding == false)
+        ProfileOnboardingScreen(
+            profileData = profileData,
+            context = context,
+            topPadding = topPadding,
+            bottomPadding = bottomPadding,
+            navController = navController,
+            viewModel = viewModel,
+            isLoading = submissionStatus == ResponseStatus.LOADING,
+        )
+    else
+        ProfilePrefixComponent(
+            topPadding = topPadding,
+            bottomPadding = bottomPadding,
+            snackbarHostState = snackbarHostState,
+            modifier = modifier,
+            user = user,
+            onSelectedImage = {
+                viewModel.changeProfilePicture(it!!)
+            },
+            onRefreshParams = {
+                viewModel.observeProfileData()
+            },
+            onLogout = {
+                viewModel.logout()
+            }
         ) {
-            name = it
-            checkIfModified()
-        }
-        AppInput.DatePicker(
-            useLabel = true,
-            label = "Date of birth",
-            value = selectedDate,
-            testTag = "dateField",
-            placeHolder = "Your Date of Birth",
-            placeHolderColor = Color.Gray.copy(alpha = .8f),
-        ) {
-            selectedDate = it
-            checkIfModified()
-        }
-        AppInput.WithLabel(
-            imeAction = ImeAction.Next,
-            label = "Address",
-            value = address,
-            testTag = "addressField",
-            placeHolder = "Your Address",
-            placeHolderColor = Color.Gray.copy(alpha = .8f),
-        ) {
-            address = it
-            checkIfModified()
-        }
-        AppInput.Dropdown(
-            label = "Gender",
-            testTag = "genderField",
-            initialValue = selectedGender,
-            dropdownItems = listOf("Male", "Female"),
-            placeHolder = "Your Gender",
-        ) {
-            selectedGender = it
-            checkIfModified()
-        }
-        AppInput.IsDigitOnly(
-            label = "Contact",
-            value = contact,
-            testTag = "contactField",
-            placeHolder = "Your Phone Number",
-            placeHolderColor = Color.Gray.copy(alpha = .8f),
-            imeAction = ImeAction.Done
-        ) {
-            contact = it
-            checkIfModified()
-        }
-        if (isModified) {
-            val userData = User(
-                name = name,
-                dateOfBirth = selectedDate,
-                address = address,
-                gender = selectedGender,
-                phoneNumber = contact,
-                role = User.CLIENT_ROLE,
-                employeeData = null
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            AppInput.WithLabel(
+                imeAction = ImeAction.Next,
+                label = "Name",
+                value = name,
+                testTag = "nameField",
+                placeHolder = "Your Name",
+                placeHolderColor = Color.Gray.copy(alpha = .8f),
             ) {
-                Button(
-                    onClick = {
-                        name = profileData?.name ?: user?.displayName ?: ""
-                        selectedDate = profileData?.dateOfBirth ?: ""
-                        selectedGender = profileData?.gender ?: ""
-                        contact = profileData?.phoneNumber ?: ""
-                        address = profileData?.address ?: ""
-                    }, colors = buttonColors(containerColor = AppToscaColor),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 4.dp
-                    )
+                name = it
+                checkIfModified()
+            }
+            AppInput.DatePicker(
+                useLabel = true,
+                label = "Date of birth",
+                value = selectedDate,
+                testTag = "dateField",
+                placeHolder = "Your Date of Birth",
+                placeHolderColor = Color.Gray.copy(alpha = .8f),
+            ) {
+                selectedDate = it
+                checkIfModified()
+            }
+            AppInput.WithLabel(
+                imeAction = ImeAction.Next,
+                label = "Address",
+                value = address,
+                testTag = "addressField",
+                placeHolder = "Your Address",
+                placeHolderColor = Color.Gray.copy(alpha = .8f),
+            ) {
+                address = it
+                checkIfModified()
+            }
+            AppInput.Dropdown(
+                label = "Gender",
+                testTag = "genderField",
+                initialValue = selectedGender,
+                dropdownItems = listOf("Male", "Female"),
+                placeHolder = "Your Gender",
+            ) {
+                selectedGender = it
+                checkIfModified()
+            }
+            AppInput.IsDigitOnly(
+                label = "Contact",
+                value = contact,
+                testTag = "contactField",
+                placeHolder = "Your Phone Number",
+                placeHolderColor = Color.Gray.copy(alpha = .8f),
+                imeAction = ImeAction.Done
+            ) {
+                contact = it
+                checkIfModified()
+            }
+            if (isModified) {
+                val userData = User(
+                    name = name,
+                    dateOfBirth = selectedDate,
+                    address = address,
+                    gender = selectedGender,
+                    phoneNumber = contact,
+                    role = User.CLIENT_ROLE,
+                    employeeData = null
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (submissionStatus == ResponseStatus.LOADING) {
-                        AppCircularLoading(useSpacer = false)
-                    } else {
-                        AppText.Small15(
-                            text = "Batal",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
+                    Button(
+                        enabled = submissionStatus != ResponseStatus.LOADING,
+                        onClick = {
+                            name = profileData?.name ?: user?.displayName ?: ""
+                            selectedDate = profileData?.dateOfBirth ?: ""
+                            selectedGender = profileData?.gender ?: ""
+                            contact = profileData?.phoneNumber ?: ""
+                            address = profileData?.address ?: ""
+                        }, colors = buttonColors(containerColor = AppToscaColor),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp
                         )
+                    ) {
+                        if (submissionStatus == ResponseStatus.LOADING) {
+                            AppCircularLoading(useSpacer = false)
+                        } else {
+                            AppText.Small15(
+                                text = "Batal",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
-                }
-                Button(
-                    enabled = (profileData ?: User()) != userData,
-                    onClick = {
-                        viewModel.editProfile(
-                            userData
+                    Button(
+                        enabled = (profileData
+                            ?: User()) != userData && submissionStatus != ResponseStatus.LOADING,
+                        onClick = {
+                            viewModel.editProfile(
+                                userData
+                            )
+                        }, colors = buttonColors(containerColor = AppToscaColor),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp
                         )
-                    }, colors = buttonColors(containerColor = AppToscaColor),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 4.dp
-                    )
-                ) {
-                    if (submissionStatus == ResponseStatus.LOADING) {
-                        AppCircularLoading()
-                    } else {
-                        AppText.Small15(
-                            text = "Simpan",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    ) {
+                        if (submissionStatus == ResponseStatus.LOADING) {
+                            AppCircularLoading(useSpacer = false)
+                        } else {
+                            AppText.Small15(
+                                text = "Simpan",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
         }
-    }
 }
