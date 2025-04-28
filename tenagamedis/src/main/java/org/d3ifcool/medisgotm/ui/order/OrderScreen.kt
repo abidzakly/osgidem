@@ -29,13 +29,7 @@ import androidx.compose.material3.CardDefaults.cardColors
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -54,7 +48,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
@@ -69,16 +62,15 @@ import org.d3ifcool.medisgosh.component.AppLabel
 import org.d3ifcool.medisgosh.component.AppText
 import org.d3ifcool.medisgosh.model.Order
 import org.d3ifcool.medisgosh.navigation.Screen
-import org.d3ifcool.medisgosh.ui.theme.AppDanger
 import org.d3ifcool.medisgosh.ui.theme.AppDarkBlueColor
-import org.d3ifcool.medisgosh.ui.theme.AppDarkToscaColor
 import org.d3ifcool.medisgosh.ui.theme.AppLightNavyColor
 import org.d3ifcool.medisgosh.ui.theme.AppMediumLightBlueColor
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
-import org.d3ifcool.medisgosh.ui.theme.AppWarning
 import org.d3ifcool.medisgosh.ui.theme.BackButton
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.util.MediaUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,13 +87,13 @@ fun OrderScreen(
     var selectedOrder by remember { mutableStateOf<Order?>(null) }
 
     var showOrderDialog by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val snackbarHostState = rememberSnackbarHostState()
+    val coroutineScope = rememberCoroutineScope()
     val state = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
     val onRefresh: () -> Unit = {
         isRefreshing = true
-        scope.launch {
+        coroutineScope.launch {
             delay(1000)
             viewModel.observeOrders()
             isRefreshing = false
@@ -122,29 +114,22 @@ fun OrderScreen(
 
     LaunchedEffect(submissionStatus) {
         when (submissionStatus) {
-            AppObjectState.SUCCESS -> {
-                val message = submissionStatus.message ?: "Berhasil"
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = message,
-                        duration = SnackbarDuration.Short
-                    )
-                }
+            ResponseStatus.SUCCESS -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    submissionStatus.message ?: "Berhasil",
+                )
                 if (showOrderDialog) {
                     showOrderDialog = false
                 }
                 viewModel.reset()
             }
 
-            AppObjectState.FAILED -> {
-                val message = submissionStatus.message ?: "Gagal"
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        actionLabel = "Error",
-                        message = message,
-                        duration = SnackbarDuration.Short
-                    )
-                }
+            ResponseStatus.FAILED -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    submissionStatus.message ?: "Gagal",
+                )
                 if (showOrderDialog) {
                     showOrderDialog = false
                 }
@@ -157,38 +142,9 @@ fun OrderScreen(
 
     AppContainer.WithTopBar(
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
-                ) {
-                    Snackbar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 30.dp)
-                            .clip(RoundedCornerShape(16.dp)),
-                        containerColor = when (it.visuals.actionLabel) {
-                            "Error" -> AppDanger
-                            "Warning" -> AppWarning
-                            else -> AppDarkToscaColor
-                        }
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = it.visuals.message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
+            FlashMessageHelper.FlashMessageHost(
+                snackbarHostState,
+            )
         },
         modifier = modifier,
         profileImageUrl = user?.photoUrl.toString(),
@@ -210,28 +166,42 @@ fun OrderScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = if (fetchStatus == AppObjectState.SUCCESS) Arrangement.Top else Arrangement.Center,
+                verticalArrangement = if (fetchStatus == ResponseStatus.SUCCESS) Arrangement.Top else Arrangement.Center,
                 contentPadding = PaddingValues(vertical = 36.dp)
             ) {
                 when (fetchStatus) {
-                    AppObjectState.LOADING -> {
+                    ResponseStatus.LOADING -> {
                         item {
                             AppCircularLoading(color = AppDarkBlueColor, useSpacer = false)
                         }
                     }
 
-                    AppObjectState.SUCCESS -> {
-                        items(fetchedData!!) {
-                            OrderCard(
-                                order = it
-                            ) {
-                                selectedOrder = it
-                                showOrderDialog = true
+                    ResponseStatus.SUCCESS -> {
+                        if (!fetchedData.isNullOrEmpty())
+                            items(fetchedData!!) {
+                                OrderCard(
+                                    order = it
+                                ) {
+                                    selectedOrder = it
+                                    showOrderDialog = true
+                                }
                             }
-                        }
+                        else
+                            item {
+                                Image(
+                                    modifier = Modifier.size(60.dp),
+                                    painter = painterResource(org.d3ifcool.medisgotm.R.drawable.order_empty_illustration),
+                                    contentDescription = null,
+                                )
+                                Spacer(Modifier.height(52.dp))
+                                AppText.Regular16(
+                                    text = "Belum ada Antrian",
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                     }
 
-                    AppObjectState.FAILED -> {
+                    ResponseStatus.FAILED -> {
                         item {
                             Image(
                                 modifier = Modifier.size(60.dp),
@@ -273,7 +243,7 @@ private fun OrderCard(
             ),
             shape = RoundedCornerShape(15.dp)
         ) {
-            var imageLoadStatus by remember { mutableStateOf(AppObjectState.IDLE) }
+            var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -284,13 +254,13 @@ private fun OrderCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (order.client?.photoUrl != null && order.client?.photoUrl!!.isEmpty() || imageLoadStatus == AppObjectState.FAILED) {
+                    if (order.client?.photoUrl != null && order.client?.photoUrl!!.isEmpty() || imageLoadStatus == ResponseStatus.FAILED) {
                         Image(
                             imageVector = ImageVector.vectorResource(id = R.drawable.account_circle),
                             contentDescription = null
                         )
                     } else {
-                        if (imageLoadStatus == AppObjectState.LOADING) {
+                        if (imageLoadStatus == ResponseStatus.LOADING) {
                             AppCircularLoading(color = Color.White, size = 30.dp)
                         }
                         AsyncImage(
@@ -300,13 +270,13 @@ private fun OrderCard(
                             model = order.client?.photoUrl.toString(),
                             contentDescription = "User's Profile Photo",
                             onLoading = {
-                                imageLoadStatus = AppObjectState.LOADING
+                                imageLoadStatus = ResponseStatus.LOADING
                             },
                             onError = {
-                                imageLoadStatus = AppObjectState.FAILED
+                                imageLoadStatus = ResponseStatus.FAILED
                             },
                             onSuccess = {
-                                imageLoadStatus = AppObjectState.SUCCESS
+                                imageLoadStatus = ResponseStatus.SUCCESS
                             }
                         )
                     }
@@ -325,7 +295,7 @@ private fun OrderCard(
                         )
                         Spacer(Modifier.width(4.dp))
                         AppText.Small15(
-                            text = AppHelper.stripeFormat(order.appointmentTime!!),
+                            text = AppHelper.stripeFormat(order.appointmentTime) ?: "",
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White,
                         )
@@ -348,7 +318,7 @@ private fun OrderDialog(
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     order: Order,
-    submissionStatus: AppObjectState,
+    submissionStatus: ResponseStatus,
     onMarkAsDone: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -366,7 +336,7 @@ private fun OrderDialog(
                 onClick = {},
                 colors = cardColors(containerColor = Color.White),
             ) {
-                var imageLoadStatus by remember { mutableStateOf(AppObjectState.IDLE) }
+                var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -375,14 +345,14 @@ private fun OrderDialog(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (order.client?.photoUrl != null && order.client?.photoUrl!!.isEmpty() || imageLoadStatus == AppObjectState.FAILED) {
+                        if (order.client?.photoUrl != null && order.client?.photoUrl!!.isEmpty() || imageLoadStatus == ResponseStatus.FAILED) {
                             Image(
                                 modifier = Modifier.size(100.dp),
                                 imageVector = ImageVector.vectorResource(id = R.drawable.account_circle),
                                 contentDescription = null
                             )
                         } else {
-                            if (imageLoadStatus == AppObjectState.LOADING) {
+                            if (imageLoadStatus == ResponseStatus.LOADING) {
                                 AppCircularLoading(
                                     color = Color.Black,
                                     size = 30.dp,
@@ -396,13 +366,13 @@ private fun OrderDialog(
                                 model = order.client?.photoUrl.toString(),
                                 contentDescription = "Doctor's Profile Photo",
                                 onLoading = {
-                                    imageLoadStatus = AppObjectState.LOADING
+                                    imageLoadStatus = ResponseStatus.LOADING
                                 },
                                 onError = {
-                                    imageLoadStatus = AppObjectState.FAILED
+                                    imageLoadStatus = ResponseStatus.FAILED
                                 },
                                 onSuccess = {
-                                    imageLoadStatus = AppObjectState.SUCCESS
+                                    imageLoadStatus = ResponseStatus.SUCCESS
                                 }
                             )
                         }
@@ -456,13 +426,13 @@ private fun OrderDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        if (imageLoadStatus == AppObjectState.LOADING) {
+                        if (imageLoadStatus == ResponseStatus.LOADING) {
                             AppCircularLoading(
                                 color = Color.Black,
                                 size = 30.dp,
                                 useSpacer = false,
                             )
-                        } else if (imageLoadStatus == AppObjectState.FAILED) {
+                        } else if (imageLoadStatus == ResponseStatus.FAILED) {
                             Image(
                                 modifier = Modifier.size(100.dp),
                                 painter = painterResource(R.drawable.baseline_broken_image_24),
@@ -471,7 +441,7 @@ private fun OrderDialog(
                         }
                         AsyncImage(
                             modifier = Modifier
-                                .size(if (imageLoadStatus == AppObjectState.SUCCESS) 200.dp else 0.dp)
+                                .size(if (imageLoadStatus == ResponseStatus.SUCCESS) 200.dp else 0.dp)
                                 .clip(RoundedCornerShape(13.dp))
                                 .clickable {
                                     MediaUtils.previewFile(
@@ -490,16 +460,16 @@ private fun OrderDialog(
                             model = order.supportingImageUrl.toString(),
                             contentDescription = "Client's Supporting Image",
                             onLoading = {
-                                imageLoadStatus = AppObjectState.LOADING
+                                imageLoadStatus = ResponseStatus.LOADING
                             },
                             onError = {
-                                imageLoadStatus = AppObjectState.FAILED
+                                imageLoadStatus = ResponseStatus.FAILED
                             },
                             onSuccess = {
-                                imageLoadStatus = AppObjectState.SUCCESS
+                                imageLoadStatus = ResponseStatus.SUCCESS
                             }
                         )
-                        if (imageLoadStatus == AppObjectState.SUCCESS) {
+                        if (imageLoadStatus == ResponseStatus.SUCCESS) {
                             Image(
                                 painter = painterResource(R.drawable.doctor_holding_stuff),
                                 contentDescription = null
@@ -519,7 +489,7 @@ private fun OrderDialog(
                                 defaultElevation = 4.dp
                             )
                         ) {
-                            if (submissionStatus == AppObjectState.LOADING) {
+                            if (submissionStatus == ResponseStatus.LOADING) {
                                 AppCircularLoading(useSpacer = false)
                             } else {
                                 AppText.Small15(
@@ -537,7 +507,7 @@ private fun OrderDialog(
                                 defaultElevation = 4.dp
                             )
                         ) {
-                            if (submissionStatus == AppObjectState.LOADING) {
+                            if (submissionStatus == ResponseStatus.LOADING) {
                                 AppCircularLoading(useSpacer = false)
                             } else {
                                 AppText.Small15(

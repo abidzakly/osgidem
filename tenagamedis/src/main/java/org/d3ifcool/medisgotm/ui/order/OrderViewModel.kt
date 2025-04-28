@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.model.Order
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.repository.OrderRepository
 
 class OrderViewModel(
@@ -16,10 +16,10 @@ class OrderViewModel(
     var fetchedOrders = mutableStateOf<List<Order>?>(null)
         private set
 
-    var fetchStatus = mutableStateOf(AppObjectState.IDLE)
+    var fetchStatus = mutableStateOf(ResponseStatus.IDLE)
         private set
 
-    var submissionStatus = mutableStateOf(AppObjectState.IDLE)
+    var submissionStatus = mutableStateOf(ResponseStatus.IDLE)
         private set
 
     init {
@@ -27,20 +27,20 @@ class OrderViewModel(
     }
 
     fun observeOrders() {
-        fetchStatus.value = AppObjectState.LOADING
+        fetchStatus.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
             orderRepository.getOrders(
                 isEmployee = true,
                 onDataUpdated = { list ->
                     if (!list.isNullOrEmpty()) {
                         fetchedOrders.value = list.filter { it.status == "ONGOING" }
-                        fetchStatus.value = AppObjectState.SUCCESS
+                        fetchStatus.value = ResponseStatus.SUCCESS
                     } else {
-                        fetchStatus.value = AppObjectState.FAILED
+                        fetchStatus.value = ResponseStatus.FAILED
                     }
                 },
                 onError = {
-                    fetchStatus.value = AppObjectState.FAILED.apply {
+                    fetchStatus.value = ResponseStatus.FAILED.apply {
                         updateMessage(it.message)
                     }
                 }
@@ -49,14 +49,14 @@ class OrderViewModel(
     }
 
     fun markAsDone(order: Order) {
-        submissionStatus.value = AppObjectState.LOADING
+        submissionStatus.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
             submissionStatus.value = orderRepository.markAsDone(order)
         }
     }
 
     fun reset() {
-        submissionStatus.value = AppObjectState.IDLE
+        submissionStatus.value = ResponseStatus.IDLE
     }
 
     override fun onCleared() {

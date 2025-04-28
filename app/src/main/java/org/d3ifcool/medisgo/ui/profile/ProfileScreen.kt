@@ -1,10 +1,8 @@
 package org.d3ifcool.medisgo.ui.profile
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonDefaults.buttonColors
@@ -13,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +28,9 @@ import org.d3ifcool.medisgosh.model.User
 import org.d3ifcool.medisgosh.ui.profile.ProfilePrefixComponent
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 @Composable
 fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel: ProfileViewModel) {
@@ -42,17 +43,37 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
     var address by remember { mutableStateOf("") }
     var selectedGender by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
+    var isModified by remember { mutableStateOf(false) }
+    fun checkIfModified() {
+        isModified = name != profileData?.name ||
+                selectedDate != profileData?.dateOfBirth ||
+                address != profileData?.address ||
+                selectedGender != profileData?.gender ||
+                contact != profileData?.phoneNumber
+    }
+
+    val snackbarHostState = rememberSnackbarHostState()
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(submissionStatus) {
         when (submissionStatus) {
-            AppObjectState.LOADING -> AppHelper.toastGenerator(context, strMessage = "Menunggu")
 
-            AppObjectState.IDLE -> null
-
-            else -> {
-                AppHelper.toastGenerator(context, strMessage = submissionStatus.message)
+            ResponseStatus.SUCCESS -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    submissionStatus.message ?: "Berhasil",
+                )
                 viewModel.resetStatus()
             }
+
+            ResponseStatus.FAILED -> {
+                FlashMessageHelper.showError(
+                    snackbarHostState, coroutineScope,
+                    submissionStatus.message ?: "Gagal",
+                )
+                viewModel.resetStatus()
+            }
+            else -> null
         }
     }
 
@@ -74,6 +95,9 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
         },
         onRefreshParams = {
             viewModel.observeProfileData()
+        },
+        onLogout = {
+            viewModel.logout()
         }
     ) {
         AppInput.WithLabel(
@@ -85,6 +109,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
             placeHolderColor = Color.Gray.copy(alpha = .8f),
         ) {
             name = it
+            checkIfModified()
         }
         AppInput.DatePicker(
             useLabel = true,
@@ -95,6 +120,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
             placeHolderColor = Color.Gray.copy(alpha = .8f),
         ) {
             selectedDate = it
+            checkIfModified()
         }
         AppInput.WithLabel(
             imeAction = ImeAction.Next,
@@ -105,6 +131,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
             placeHolderColor = Color.Gray.copy(alpha = .8f),
         ) {
             address = it
+            checkIfModified()
         }
         AppInput.Dropdown(
             label = "Gender",
@@ -114,6 +141,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
             placeHolder = "Your Gender",
         ) {
             selectedGender = it
+            checkIfModified()
         }
         AppInput.IsDigitOnly(
             label = "Contact",
@@ -124,11 +152,9 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
             imeAction = ImeAction.Done
         ) {
             contact = it
+            checkIfModified()
         }
-        if (
-            name.isNotEmpty() && selectedDate.isNotEmpty() && address.isNotEmpty() &&
-            selectedGender.isNotEmpty() && contact.isNotEmpty()
-        ) {
+        if (isModified) {
             val userData = User(
                 name = name,
                 dateOfBirth = selectedDate,
@@ -155,7 +181,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
                         defaultElevation = 4.dp
                     )
                 ) {
-                    if (submissionStatus == AppObjectState.LOADING) {
+                    if (submissionStatus == ResponseStatus.LOADING) {
                         AppCircularLoading(useSpacer = false)
                     } else {
                         AppText.Small15(
@@ -176,7 +202,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, user: FirebaseUser?, viewModel:
                         defaultElevation = 4.dp
                     )
                 ) {
-                    if (submissionStatus == AppObjectState.LOADING) {
+                    if (submissionStatus == ResponseStatus.LOADING) {
                         AppCircularLoading()
                     } else {
                         AppText.Small15(

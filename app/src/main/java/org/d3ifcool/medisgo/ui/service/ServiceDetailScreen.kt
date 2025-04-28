@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,15 +23,11 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseUser
 import org.d3ifcool.medisgo.R
 import org.d3ifcool.medisgosh.component.AppContainer
-import org.d3ifcool.medisgosh.component.AppTopBar
 import org.d3ifcool.medisgosh.navigation.Screen
-import org.d3ifcool.medisgosh.ui.theme.AppDarkGreenColor
 import org.d3ifcool.medisgosh.ui.theme.AppDarkToscaColor
 import org.d3ifcool.medisgosh.ui.theme.AppMediumLightBlueColor
-import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
 import org.d3ifcool.medisgosh.ui.theme.BackButton
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -178,24 +172,6 @@ fun ServiceDetailScreen(
                 }
                 Spacer(Modifier.height(42.dp))
             }
-            // Bagian Pengalaman
-            item {
-                Text(
-                    text = "Pengalaman",
-                    fontSize = 20.sp
-                )
-                Spacer(Modifier.height(16.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(Color.White)
-                ) {
-
-                }
-                Spacer(Modifier.height(30.dp))
-            }
             item {
                 Text(
                     text = "Rating",
@@ -247,35 +223,6 @@ fun ServiceDetailScreen(
                             )
                         }
                     }
-                }
-                Spacer(Modifier.height(35.dp))
-            }
-            item {
-                Text(
-                    text = "Biaya Layanan",
-                    fontSize = 20.sp
-                )
-                Spacer(Modifier.height(179.dp))
-            }
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Button(
-                        onClick = {},
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AppDarkToscaColor
-                        )
-                    ) {
-                        Text(
-                            text = "GET STARTED",
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
                 }
             }
         }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,14 +18,14 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import org.d3ifcool.medisgosh.R
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 @Composable
 fun AppTopBar(
     modifier: Modifier = Modifier,
     imageUrl: String,
-    state: AppObjectState,
-    onStateChange: (AppObjectState) -> Unit,
+    state: ResponseStatus,
+    onStateChange: (ResponseStatus) -> Unit,
     onProfileClicked: () -> Unit,
 ) {
     Row(
@@ -48,7 +47,7 @@ fun AppTopBar(
                 },
             contentAlignment = Alignment.Center
         ) {
-            if (imageUrl.isEmpty() || state == AppObjectState.FAILED) {
+            if (imageUrl.isEmpty() || state == ResponseStatus.FAILED) {
                 Image(
                     modifier = Modifier
                         .size(56.dp)
@@ -57,7 +56,7 @@ fun AppTopBar(
                     contentDescription = null
                 )
             } else {
-                if (state == AppObjectState.LOADING) {
+                if (state == ResponseStatus.LOADING) {
                     AppCircularLoading(color = Color.Black, size = 30.dp)
                 }
                 AsyncImage(
@@ -67,13 +66,13 @@ fun AppTopBar(
                     model = imageUrl,
                     contentDescription = "User's Profile Photo",
                     onLoading = {
-                        onStateChange(AppObjectState.LOADING)
+                        onStateChange(ResponseStatus.LOADING)
                     },
                     onError = {
-                        onStateChange(AppObjectState.FAILED)
+                        onStateChange(ResponseStatus.FAILED)
                     },
                     onSuccess = {
-                        onStateChange(AppObjectState.SUCCESS)
+                        onStateChange(ResponseStatus.SUCCESS)
                     }
                 )
             }

@@ -97,7 +97,7 @@ fun AppBottomBar(navController: NavHostController, isEmployee: Boolean) {
                     startY = -570f,
                     colors = listOf(
                         NavBarGradientTopColor,
-                        Color.White.copy(alpha = .6f)
+                        Color(0xFFD8F0FF)
                     )
                 )
             )

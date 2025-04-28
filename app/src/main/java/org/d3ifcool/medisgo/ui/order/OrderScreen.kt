@@ -57,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -93,7 +92,9 @@ import org.d3ifcool.medisgosh.ui.theme.AppWarning
 import org.d3ifcool.medisgosh.ui.theme.BackButton
 import org.d3ifcool.medisgosh.ui.theme.PembayaranColor
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.util.MediaUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,14 +112,13 @@ fun OrderScreen(
     var showCancelDialog by remember { mutableStateOf(false) }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedOrder by remember { mutableStateOf<Order?>(null) }
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val snackbarHostState = rememberSnackbarHostState()
+    val coroutineScope = rememberCoroutineScope()
     val state = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
     val onRefresh: () -> Unit = {
         isRefreshing = true
-        scope.launch {
+        coroutineScope.launch {
             delay(1000)
             viewModel.observeOrders()
             isRefreshing = false
@@ -131,14 +131,11 @@ fun OrderScreen(
 
     LaunchedEffect(submissionStatus) {
         when (submissionStatus) {
-            AppObjectState.SUCCESS -> {
-                val message = submissionStatus.message ?: "Berhasil"
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = message,
-                        duration = SnackbarDuration.Short
-                    )
-                }
+            ResponseStatus.SUCCESS -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    submissionStatus.message ?: "Berhasil"
+                )
                 if (showCancelDialog) {
                     showCancelDialog = false
                 } else {
@@ -147,15 +144,12 @@ fun OrderScreen(
                 viewModel.reset()
             }
 
-            AppObjectState.FAILED -> {
-                val message = submissionStatus.message ?: "Gagal"
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        actionLabel = "Error",
-                        message = message,
-                        duration = SnackbarDuration.Short
-                    )
-                }
+            ResponseStatus.FAILED -> {
+
+                FlashMessageHelper.showError(
+                    snackbarHostState, coroutineScope,
+                    submissionStatus.message ?: "Gagal"
+                )
                 if (showCancelDialog) {
                     showCancelDialog = false
                 }
@@ -186,38 +180,9 @@ fun OrderScreen(
 
     AppContainer.WithTopBar(
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
-                ) {
-                    Snackbar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 30.dp)
-                            .clip(RoundedCornerShape(16.dp)),
-                        containerColor = when (it.visuals.actionLabel) {
-                            "Error" -> AppDanger
-                            "Warning" -> AppWarning
-                            else -> AppDarkToscaColor
-                        }
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = it.visuals.message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
+            FlashMessageHelper.FlashMessageHost(
+                snackbarHostState,
+            )
         },
         modifier = modifier,
         profileImageUrl = user?.photoUrl.toString(),
@@ -315,11 +280,11 @@ fun OrderScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = if (fetchStatus == AppObjectState.SUCCESS && !fetchedData.isNullOrEmpty()) Arrangement.Top else Arrangement.Center,
+                    verticalArrangement = if (fetchStatus == ResponseStatus.SUCCESS && !fetchedData.isNullOrEmpty()) Arrangement.Top else Arrangement.Center,
                     contentPadding = PaddingValues(bottom = 86.dp, top = 16.dp)
                 ) {
                     when (fetchStatus) {
-                        AppObjectState.LOADING -> {
+                        ResponseStatus.LOADING -> {
                             item {
                                 AppCircularLoading(
                                     color = AppDarkBlueColor,
@@ -329,7 +294,7 @@ fun OrderScreen(
                             }
                         }
 
-                        AppObjectState.SUCCESS -> {
+                        ResponseStatus.SUCCESS -> {
                             if (!fetchedData.isNullOrEmpty()) {
                                 items(fetchedData!!) {
                                     Box(
@@ -343,17 +308,7 @@ fun OrderScreen(
                                                 showCancelDialog = true
                                             },
                                             onSubmitPayment = { bitmap ->
-                                                if (bitmap != null) {
-                                                    viewModel.submitPayment(it, bitmap)
-                                                } else {
-                                                    scope.launch {
-                                                        snackbarHostState.showSnackbar(
-                                                            message = "Foto Bukti Pembayaran tidak boleh kosong!",
-                                                            duration = SnackbarDuration.Short,
-                                                            actionLabel = "Error"
-                                                        )
-                                                    }
-                                                }
+                                                viewModel.submitPayment(it)
                                             },
                                         )
                                     }
@@ -373,7 +328,7 @@ fun OrderScreen(
                             }
                         }
 
-                        AppObjectState.FAILED -> {
+                        ResponseStatus.FAILED -> {
                             item {
                                 Image(
                                     painter = painterResource(R.drawable.order_empty_illustration),
@@ -399,7 +354,7 @@ fun OrderScreen(
 private fun OrderCard(
     modifier: Modifier = Modifier,
     order: Order,
-    submissionStatus: AppObjectState,
+    submissionStatus: ResponseStatus,
     onCancelOrder: () -> Unit,
     onSubmitPayment: (Bitmap?) -> Unit,
 ) {
@@ -417,7 +372,7 @@ private fun OrderCard(
         colors = outlinedCardColors(containerColor = Color.Transparent),
         border = BorderStroke(2.dp, Color.Black.copy(alpha = .5f))
     ) {
-        var imageLoadStatus by remember { mutableStateOf(AppObjectState.IDLE) }
+        var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -426,14 +381,14 @@ private fun OrderCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (order.doctor?.photoUrl != null && order.doctor?.photoUrl!!.isEmpty() || imageLoadStatus == AppObjectState.FAILED) {
+                if (order.doctor?.photoUrl != null && order.doctor?.photoUrl!!.isEmpty() || imageLoadStatus == ResponseStatus.FAILED) {
                     Image(
                         modifier = Modifier.size(100.dp),
                         imageVector = ImageVector.vectorResource(id = R.drawable.account_circle),
                         contentDescription = null
                     )
                 } else {
-                    if (imageLoadStatus == AppObjectState.LOADING) {
+                    if (imageLoadStatus == ResponseStatus.LOADING) {
                         AppCircularLoading(
                             color = Color.Black,
                             size = 30.dp,
@@ -447,13 +402,13 @@ private fun OrderCard(
                         model = order.doctor?.photoUrl.toString(),
                         contentDescription = "Doctor's Profile Photo",
                         onLoading = {
-                            imageLoadStatus = AppObjectState.LOADING
+                            imageLoadStatus = ResponseStatus.LOADING
                         },
                         onError = {
-                            imageLoadStatus = AppObjectState.FAILED
+                            imageLoadStatus = ResponseStatus.FAILED
                         },
                         onSuccess = {
-                            imageLoadStatus = AppObjectState.SUCCESS
+                            imageLoadStatus = ResponseStatus.SUCCESS
                         }
                     )
                 }
@@ -477,34 +432,6 @@ private fun OrderCard(
                             text = order.doctor?.employeeData?.type ?: "-",
                             color = AppMediumLightBlueColor
                         )
-                    }
-                    if (order.status == "UNPAID") {
-                        Spacer(Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(IntrinsicSize.Max)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    Color.White
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                AppLabel.WithTextData(
-                                    useSpacer = false,
-                                    modifier = modifier,
-                                    color = PembayaranColor,
-                                    label = "Pembayaran bisa melalui:",
-                                    textData =
-                                    if (order.doctor?.employeeData != null)
-                                        "${order.doctor?.employeeData!!.accountNumber} (${order.doctor?.employeeData!!.bankName})"
-                                    else
-                                        "-"
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -533,13 +460,13 @@ private fun OrderCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (imageLoadStatus == AppObjectState.LOADING) {
+                if (imageLoadStatus == ResponseStatus.LOADING) {
                     AppCircularLoading(
                         color = Color.Black,
                         size = 30.dp,
                         useSpacer = false,
                     )
-                } else if (imageLoadStatus == AppObjectState.FAILED) {
+                } else if (imageLoadStatus == ResponseStatus.FAILED) {
                     Image(
                         modifier = Modifier.size(100.dp),
                         painter = painterResource(R.drawable.baseline_broken_image_24),
@@ -548,7 +475,7 @@ private fun OrderCard(
                 }
                 AsyncImage(
                     modifier = Modifier
-                        .size(if (imageLoadStatus == AppObjectState.SUCCESS) 200.dp else 0.dp)
+                        .size(if (imageLoadStatus == ResponseStatus.SUCCESS) 200.dp else 0.dp)
                         .clip(RoundedCornerShape(13.dp))
                         .clickable {
                             MediaUtils.previewFile(context, order.supportingImageUrl!!.toString()) {
@@ -564,92 +491,19 @@ private fun OrderCard(
                     model = order.supportingImageUrl.toString(),
                     contentDescription = "Client's Supporting Image",
                     onLoading = {
-                        imageLoadStatus = AppObjectState.LOADING
+                        imageLoadStatus = ResponseStatus.LOADING
                     },
                     onError = {
-                        imageLoadStatus = AppObjectState.FAILED
+                        imageLoadStatus = ResponseStatus.FAILED
                     },
                     onSuccess = {
-                        imageLoadStatus = AppObjectState.SUCCESS
+                        imageLoadStatus = ResponseStatus.SUCCESS
                     }
                 )
-                if (imageLoadStatus == AppObjectState.SUCCESS) {
+                if (imageLoadStatus == ResponseStatus.SUCCESS) {
                     Image(
                         painter = painterResource(R.drawable.doctor_holding_stuff),
                         contentDescription = null
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(.5f),
-                    onClick = {
-                        if (order.paymentReceiptUrl.isNullOrEmpty() && order.status == "UNPAID") {
-                            val options = CropImageContractOptions(
-                                null, CropImageOptions(
-                                    imageSourceIncludeGallery = true,
-                                    imageSourceIncludeCamera = true,
-                                    fixAspectRatio = true
-                                )
-                            )
-                            launcher.launch(options)
-                        } else {
-                            MediaUtils.previewFile(context, order.paymentReceiptUrl!!.toString()) {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        "No app found to open this file type",
-                                        Toast.LENGTH_SHORT
-                                    )
-                                    .show()
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 32.dp)
-                ) {
-                    if (fileName != null) {
-                        AppText.Small14(
-                            text = fileName ?: "-",
-                            color = AppBlue2Color,
-                        )
-                    } else if (!order.paymentReceiptUrl.isNullOrEmpty()) {
-                        AsyncImage(
-                            model = order.paymentReceiptUrl!!,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(shape = RoundedCornerShape(20.dp))
-                                .aspectRatio(1f)
-                        )
-                    } else {
-                        Icon(
-                            painter = painterResource(R.drawable.camera),
-                            contentDescription = "Tombol Upload Bukti Pembayaran",
-                            tint = AppGrayColor
-                        )
-                    }
-                }
-                if (fileName != null) {
-                    Spacer(Modifier.height(8.dp))
-                    AppText.Small14(
-                        text = "Bukti pembayaran",
-                        color = AppGrayColor,
-                    )
-                } else if (order.paymentReceiptUrl.isNullOrEmpty() && order.status == "UNPAID") {
-                    Spacer(Modifier.height(8.dp))
-                    AppText.Small14(
-                        text = "Upload bukti pembayaran",
-                        color = AppGrayColor,
-                    )
-                } else {
-                    Spacer(Modifier.height(8.dp))
-                    AppText.Small14(
-                        text = "Bukti pembayaran",
-                        color = AppGrayColor,
                     )
                 }
             }
@@ -667,7 +521,7 @@ private fun OrderCard(
                             defaultElevation = 4.dp
                         )
                     ) {
-                        if (submissionStatus == AppObjectState.LOADING) {
+                        if (submissionStatus == ResponseStatus.LOADING) {
                             AppCircularLoading(useSpacer = false)
                         } else {
                             AppText.Small15(
@@ -683,7 +537,7 @@ private fun OrderCard(
                     "UNPAID" -> {
                         Button(
                             onClick = {
-                                if (order.paymentReceiptUrl.isNullOrEmpty() && order.status == "UNPAID") {
+                                if (order.paymentReceiptUrl.isNullOrEmpty()) {
                                     onSubmitPayment(bitmap)
                                 }
                             },
@@ -692,26 +546,38 @@ private fun OrderCard(
                                 defaultElevation = 4.dp
                             )
                         ) {
-                            if (submissionStatus == AppObjectState.LOADING) {
+                            if (submissionStatus == ResponseStatus.LOADING) {
                                 AppCircularLoading(useSpacer = false)
                             } else {
                                 AppText.Small15(
-                                    text = "Bayar",
+                                    text = "Administrasi",
                                     color = Color.White,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
                     }
+
                     "ONGOING" -> {
-                        Spacer(Modifier.height(24.dp))
-                        AppText.Regular16(
-                            modifier = Modifier.fillMaxWidth(),
-                            text = "Pembayaran dikonfirmasi, pesanan sedang berjalan.",
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center
-                        )
+                        Button(
+                            onClick = {},
+                            colors = buttonColors(containerColor = AppToscaColor),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 4.dp
+                            )
+                        ) {
+                            if (submissionStatus == ResponseStatus.LOADING) {
+                                AppCircularLoading(useSpacer = false)
+                            } else {
+                                AppText.Small15(
+                                    text = "Confirm",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
+
                     else -> {
                         Spacer(Modifier.height(24.dp))
                         AppText.Regular16(

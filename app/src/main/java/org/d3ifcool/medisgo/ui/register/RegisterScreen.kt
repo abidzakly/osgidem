@@ -7,7 +7,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,18 +53,20 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
+import kotlinx.coroutines.launch
 import org.d3ifcool.medisgo.R
 import org.d3ifcool.medisgosh.component.AppCircularLoading
 import org.d3ifcool.medisgosh.component.AppContainer
 import org.d3ifcool.medisgosh.component.AppInput
 import org.d3ifcool.medisgosh.component.AppText
 import org.d3ifcool.medisgosh.ui.theme.AdlamDisplay
-import org.d3ifcool.medisgosh.ui.theme.AppBlue2Color
 import org.d3ifcool.medisgosh.ui.theme.AppBlueColor
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
 import org.d3ifcool.medisgosh.ui.theme.AppTypography
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 @Composable
 fun RegisterScreen(
@@ -85,17 +87,36 @@ fun RegisterScreen(
 
     var isChecked by remember { mutableStateOf(false) }
 
+    val snackbarHostState = rememberSnackbarHostState()
+    val coroutineScope = rememberCoroutineScope()
+
     LaunchedEffect(status) {
         when (status) {
-            AppObjectState.SUCCESS -> {
-                AppHelper.toastGenerator(context, strMessage = status.message)
+            ResponseStatus.SUCCESS -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    status.message ?: "Berhasil",
+                )
+                viewModel.resetStatus()
             }
 
-            else -> AppHelper.toastGenerator(context, strMessage = status.message)
+            ResponseStatus.FAILED -> {
+                FlashMessageHelper.showError(
+                    snackbarHostState, coroutineScope,
+                    status.message ?: "Gagal",
+                )
+                viewModel.resetStatus()
+            }
+            else -> null
         }
     }
 
     AppContainer.Default(
+        snackbarHost = {
+            FlashMessageHelper.FlashMessageHost(
+                snackbarHostState,
+            )
+        },
         modifier = Modifier
     ) { innerPadding ->
         LazyColumn(
@@ -191,29 +212,43 @@ fun RegisterScreen(
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
-                        if (email.isEmpty() || password.isEmpty()) {
-                            AppHelper.toastGenerator(
-                                context,
-                                strMessage = "Pastikan seluruh data telah diisi."
-                            )
-                            emailError = true
-                            passwordError = true
-                        } else if (!email.contains("@") || !email.contains(".")) {
-                            AppHelper.toastGenerator(
-                                context,
-                                strMessage = "Pastikan format email sudah benar."
-                            )
-                            emailError = true
-                        } else {
-                            if (!AppHelper.isInternetAvailable(context)) {
-                                AppHelper.toastGenerator(
-                                    context,
-                                    strMessage = "Internet tidak tersedia."
-                                )
+                        if (isChecked) {
+                            if (email.isEmpty()) {
+                                coroutineScope.launch {
+                                    FlashMessageHelper.showWarning(
+                                        snackbarHostState, coroutineScope,
+                                        "Pastikan anda telah mengisi data yang diperlukan."
+                                    )
+                                }
+                                emailError = true
+                            } else if (!email.contains("@") || !email.contains(".")) {
+                                coroutineScope.launch {
+                                    FlashMessageHelper.showWarning(
+                                        snackbarHostState, coroutineScope,
+                                        "Pastikan format email sudah benar."
+                                    )
+                                }
+                                emailError = true
                             } else {
-                                emailError = false
-                                passwordError = false
-                                viewModel.signUp(username, email, password)
+                                if (!AppHelper.isInternetAvailable(context)) {
+                                    coroutineScope.launch {
+                                        FlashMessageHelper.showWarning(
+                                            snackbarHostState, coroutineScope,
+                                            "Internet tidak tersedia."
+                                        )
+                                    }
+                                } else {
+                                    emailError = false
+                                    passwordError = false
+                                    viewModel.signUp(username, email, password)
+                                }
+                            }
+                        } else {
+                            coroutineScope.launch {
+                                FlashMessageHelper.showWarning(
+                                    snackbarHostState, coroutineScope,
+                                    "Harap setujui S&K terlebih dahulu",
+                                )
                             }
                         }
                     },
@@ -221,7 +256,7 @@ fun RegisterScreen(
                     shape = RoundedCornerShape(8.dp),
                     elevation = buttonElevation(defaultElevation = 5.dp)
                 ) {
-                    if (status == AppObjectState.LOADING) {
+                    if (status == ResponseStatus.LOADING) {
                         AppCircularLoading()
                     }
                     AppText.Small15(
@@ -264,7 +299,10 @@ fun RegisterScreen(
                         append(" Policy.")
                     }
                     Box(
-                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color.White).size(20.dp)
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.White)
+                            .size(20.dp)
                     ) {
                         Checkbox(
                             checked = isChecked,
@@ -278,7 +316,7 @@ fun RegisterScreen(
                     }
                     Spacer(Modifier.width(10.dp))
                     AppText.Small15Annotated(
-                        text= annotatedText
+                        text = annotatedText
                     )
                 }
                 Spacer(Modifier.height(29.dp))
@@ -286,10 +324,17 @@ fun RegisterScreen(
                 val launcher = rememberLauncherForActivityResult(contract) { result ->
                     if (result.resultCode == Activity.RESULT_OK) {
                         // Firebase Authentication successful
-                        AppHelper.toastGenerator(context, strMessage = "Login Berhasil")
+                        FlashMessageHelper.showSuccess(
+                            snackbarHostState, coroutineScope,
+                            "Login Berhasil!",
+                        )
+                        viewModel.handleSignInResult()
                     } else {
                         // Handle sign-in failure
-                        AppHelper.toastGenerator(context, strMessage = "Login Gagal.")
+                        FlashMessageHelper.showSuccess(
+                            snackbarHostState, coroutineScope,
+                            "Login Gagal.",
+                        )
                     }
                 }
                 Row(
@@ -316,7 +361,16 @@ fun RegisterScreen(
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
-                        launcher.launch(viewModel.getSignInIntent())
+                        if (isChecked)
+                            launcher.launch(viewModel.getSignInIntent())
+                        else
+                            coroutineScope.launch {
+                                FlashMessageHelper.showWarning(
+                                    snackbarHostState, coroutineScope,
+                                    "Harap setujui S&K terlebih dahulu",
+                                )
+                            }
+
                     },
                     border = BorderStroke(width = 2.dp, color = Color.White)
                 ) {

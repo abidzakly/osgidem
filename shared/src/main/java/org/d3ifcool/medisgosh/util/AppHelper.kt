@@ -81,10 +81,14 @@ class AppHelper {
             return Period.between(birthDate, currentDate).years
         }
 
-        fun stripeFormat(timestamp: Timestamp): String {
-            val date = timestamp.toDate()
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            return dateFormat.format(date)
+        fun stripeFormat(timestamp: Timestamp?): String? {
+            if (timestamp != null) {
+                val date = timestamp.toDate()
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                return dateFormat.format(date)
+            } else {
+                return null
+            }
         }
 
         fun hhmmFormat(timestamp: Timestamp?): String? {

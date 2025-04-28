@@ -83,8 +83,10 @@ import org.d3ifcool.medisgosh.ui.theme.AppMediumLightBlueColor
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
 import org.d3ifcool.medisgosh.ui.theme.BackButton
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.util.DateFormatter
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
 import org.d3ifcool.medisgosh.util.MediaUtils
 import java.util.Calendar
 import java.util.Locale
@@ -98,8 +100,10 @@ fun FillOrderScreen(
     viewModel: FillOrderViewModel
 ) {
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+
+    val snackbarHostState = rememberSnackbarHostState()
+    val coroutineScope = rememberCoroutineScope()
+
     var selectedDateFinal by remember { mutableStateOf<Calendar?>(null) }
     var timeString by remember { mutableStateOf("") }
     var result by remember { mutableStateOf("") }
@@ -111,29 +115,29 @@ fun FillOrderScreen(
 
     val fetchedDoctor by viewModel.fetchedDoctor
     val submitStatus by viewModel.submitStatus
+    val selectedDate = remember { mutableStateOf<Long?>(null) }
+    val today = Calendar.getInstance()
+    val dates = (0..7).map { offset ->
+        Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, offset)
+        }.timeInMillis
+    }
     LaunchedEffect(submitStatus) {
         when (submitStatus) {
-            AppObjectState.SUCCESS -> {
-                val message = submitStatus.message!!
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = message,
-                        duration = SnackbarDuration.Short
-                    )
-                    AppHelper.navigate(navController, Screen.Client.Orders.route)
-                }
+            ResponseStatus.SUCCESS -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    submitStatus.message ?: "Janji telah dibuat"
+                )
+                AppHelper.navigate(navController, Screen.Client.Orders.route)
                 viewModel.reset()
             }
 
-            AppObjectState.FAILED -> {
-                val message = submitStatus.message!!
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        actionLabel = "Error",
-                        message = message,
-                        duration = SnackbarDuration.Short
-                    )
-                }
+            ResponseStatus.FAILED -> {
+                FlashMessageHelper.showError(
+                    snackbarHostState, coroutineScope,
+                    submitStatus.message ?: "Terjadi kesalahan"
+                )
                 viewModel.reset()
             }
 
@@ -149,38 +153,10 @@ fun FillOrderScreen(
             AppHelper.navigate(navController, Screen.General.Profile.route)
         },
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
-                ) {
-                    Snackbar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 30.dp)
-                            .clip(RoundedCornerShape(16.dp)),
-                        containerColor = when (it.visuals.actionLabel) {
-                            "Error" -> AppDanger
-                            else -> AppDarkToscaColor
-                        }
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = it.visuals.message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
-        }
+            FlashMessageHelper.FlashMessageHost(
+                snackbarHostState,
+            )
+        },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -269,16 +245,6 @@ fun FillOrderScreen(
                 Spacer(Modifier.height(23.dp))
             }
             item {
-                val selectedDate = remember { mutableStateOf<Calendar?>(null) }
-                val today = Calendar.getInstance()
-                val nextWeek = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_YEAR, 7)
-                }
-                val dates = (0..7).map { offset ->
-                    Calendar.getInstance().apply {
-                        add(Calendar.DAY_OF_YEAR, offset)
-                    }
-                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -293,8 +259,7 @@ fun FillOrderScreen(
                             .background(Color.Blue.copy(alpha = .8f))
                     ) {
                         Row(
-                            modifier = Modifier
-                                .padding(16.dp),
+                            modifier = Modifier.padding(16.dp),
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
@@ -312,9 +277,10 @@ fun FillOrderScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            items(dates) { date ->
-                                val isSelected =
-                                    selectedDate.value?.timeInMillis == date.timeInMillis
+                            items(dates) { dateMillis ->
+                                val date =
+                                    Calendar.getInstance().apply { timeInMillis = dateMillis }
+                                val isSelected = selectedDate.value == dateMillis
                                 val backgroundColor =
                                     if (isSelected) Color(0xFFFFC1E3) else Color.Transparent
                                 Column(
@@ -324,7 +290,7 @@ fun FillOrderScreen(
                                         .background(backgroundColor)
                                         .padding(horizontal = 16.dp, vertical = 16.dp)
                                         .clickable {
-                                            selectedDate.value = date
+                                            selectedDate.value = dateMillis
                                         }
                                 ) {
                                     Text(
@@ -344,9 +310,6 @@ fun FillOrderScreen(
                                     )
                                 }
                             }
-                        }
-                        selectedDate.value?.let {
-                            selectedDateFinal = it
                         }
                     }
                     Image(
@@ -523,7 +486,7 @@ fun FillOrderScreen(
                                         supportingImageUrl = null,
                                         status = "UNPAID",
                                         appointmentTime = DateFormatter.combineDateAndTime(
-                                            selectedDate = selectedDateFinal!!,
+                                            selectedDate = selectedDateFinal,
                                             timeString = timeString,
                                         ),
                                         paymentReceiptUrl = "",
@@ -534,11 +497,10 @@ fun FillOrderScreen(
                                     bitmap = bitmap!!,
                                 )
                             } else {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        actionLabel = "Error",
-                                        message = "Harap isi semua data terlebih dahulu!",
-                                        duration = SnackbarDuration.Short
+                                coroutineScope.launch {
+                                    FlashMessageHelper.showWarning(
+                                        snackbarHostState, coroutineScope,
+                                        "Harap isi semua data terlebih dahulu!"
                                     )
                                 }
                             }
@@ -549,7 +511,7 @@ fun FillOrderScreen(
                         ),
                         elevation = buttonElevation(defaultElevation = 4.dp)
                     ) {
-                        if (submitStatus == AppObjectState.LOADING) {
+                        if (submitStatus == ResponseStatus.LOADING) {
                             AppCircularLoading(useSpacer = false)
                         } else {
                             AppText.Small14(

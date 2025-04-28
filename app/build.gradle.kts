@@ -68,6 +68,11 @@ dependencies {
     implementation(libs.android.image.cropper)
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.firestore)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("com.google.accompanist:accompanist-permissions:0.30.1")
+    implementation("com.firebase:geofire-android:3.1.0")
+    implementation("com.google.firebase:firebase-database-ktx")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

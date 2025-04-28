@@ -10,7 +10,7 @@ import kotlinx.coroutines.tasks.await
 import org.d3ifcool.medisgosh.model.Order
 import org.d3ifcool.medisgosh.model.User
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.util.MediaUtils
 
 class OrderRepository(
@@ -57,7 +57,7 @@ class OrderRepository(
         }
     }
 
-    suspend fun submitOrder(order: Order, bitmap: Bitmap): AppObjectState {
+    suspend fun submitOrder(order: Order, bitmap: Bitmap): ResponseStatus {
         val byteArr = MediaUtils.bitmapToByteArray(bitmap)
         return try {
             byteArr.let {
@@ -78,47 +78,38 @@ class OrderRepository(
                         response.toObject(Order::class.java)!!
                             .copy(supportingImageUrl = downloadUrl)
                     ).await()
-                AppObjectState.SUCCESS.apply {
+                ResponseStatus.SUCCESS.apply {
                     updateMessage("Janji telah dibuat!")
                 }
             }
         } catch (e: Exception) {
             Log.e("Repo", "Error: ${e.message}", e)
             Log.d("OrderRepo", "${e.message}")
-            AppObjectState.FAILED.apply {
+            ResponseStatus.FAILED.apply {
                 updateMessage("Unknown Error Occurred")
             }
         }
     }
 
-    suspend fun submitPayment(order: Order, bitmap: Bitmap): AppObjectState {
-        val byteArr = MediaUtils.bitmapToByteArray(bitmap)
+    suspend fun submitPayment(order: Order): ResponseStatus {
         return try {
-            byteArr.let {
-                val storageRef =
-                    storage.reference.child(
-                        "${Order.COLLECTION}/${order.id}/bukti_pembayaran/PaymentReceipt_${AppHelper.getShortUUID()}.jpeg"
-                    )
-                storageRef.putBytes(it).await()
-                val downloadUrl = storageRef.downloadUrl.await().toString()
-                db.collection(Order.COLLECTION).document(order.id!!)
-                    .set(order.copy(paymentReceiptUrl = downloadUrl, status = "ONGOING")).await()
-                AppObjectState.SUCCESS.apply {
-                    updateMessage("Pembayaran berhasil")
-                }
+            db.collection(Order.COLLECTION).document(order.id!!)
+                .set(order.copy(paymentReceiptUrl = "", status = "ONGOING")).await()
+            ResponseStatus.SUCCESS.apply {
+                updateMessage("Pembayaran berhasil")
             }
         } catch (e: Exception) {
             Log.e("Repo", "Error: ${e.message}", e)
-            AppObjectState.FAILED.apply {
+            ResponseStatus.FAILED.apply {
                 updateMessage(message = e.message)
             }
         }
     }
 
-    suspend fun cancelOrder(order: Order): AppObjectState {
+    suspend fun cancelOrder(order: Order): ResponseStatus {
         order.supportingImageUrl?.let {
             val filePath = MediaUtils.getFilePathFromUrl(it)
-                ?: return AppObjectState.FAILED.apply {
+                ?: return ResponseStatus.FAILED.apply {
                     updateMessage("Pesanan gagal dibatalkan")
                 }
 
@@ -127,30 +118,31 @@ class OrderRepository(
             return try {
                 storageRef.delete().await()
                 db.collection(Order.COLLECTION).document(order.id!!).delete().await()
-                AppObjectState.SUCCESS.apply {
+                ResponseStatus.SUCCESS.apply {
                     updateMessage("Pesanan berhasil dibatalkan")
                 }
             } catch (e: Exception) {
                 Log.e("Repo", "Error: ${e.message}", e)
-                AppObjectState.FAILED.apply {
+                ResponseStatus.FAILED.apply {
                     updateMessage("Pesanan gagal dibatalkan")
                 }
             }
         }
-        return AppObjectState.FAILED.apply {
+        return ResponseStatus.FAILED.apply {
             updateMessage("Pesanan gagal dibatalkan")
         }
     }
 
-    suspend fun markAsDone(order: Order): AppObjectState {
+    suspend fun markAsDone(order: Order): ResponseStatus {
         return try {
-            db.collection(Order.COLLECTION).document(order.id!!).set(order.copy(status = "COMPLETE")).await()
-            AppObjectState.SUCCESS.apply {
+            db.collection(Order.COLLECTION).document(order.id!!)
+                .set(order.copy(status = "COMPLETE")).await()
+            ResponseStatus.SUCCESS.apply {
                 updateMessage("Pesanan berhasil diselesaikan")
             }
         } catch (e: Exception) {
             Log.e("Repo", "Error: ${e.message}", e)
-            AppObjectState.FAILED.apply {
+            ResponseStatus.FAILED.apply {
                 updateMessage("Pesanan gagal diselesaikan")
             }
         }

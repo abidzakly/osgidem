@@ -6,19 +6,28 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.repository.UserRepository
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 class ForgotPasswordViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
-    var status = mutableStateOf(AppObjectState.IDLE)
+    var status = mutableStateOf(ResponseStatus.IDLE)
         private set
 
     fun submitEmail(email: String) {
-        status.value = AppObjectState.LOADING
+        status.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
             status.value = userRepository.submitForgotPassword(email)
         }
+    }
+
+    fun resetStatus() {
+        status.value = ResponseStatus.IDLE
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        status.value = ResponseStatus.IDLE
     }
 }

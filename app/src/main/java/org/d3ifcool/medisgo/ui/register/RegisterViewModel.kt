@@ -8,17 +8,17 @@ import com.firebase.ui.auth.AuthUI
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.repository.UserRepository
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 class RegisterViewModel(
     private val userRepository: UserRepository,
 ) : ViewModel() {
 
-    var status = mutableStateOf(AppObjectState.IDLE)
+    var status = mutableStateOf(ResponseStatus.IDLE)
         private set
 
     fun signUp(username: String, email: String, password: String) {
-        status.value = AppObjectState.LOADING
+        status.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
             status.value = userRepository.signUp(username, email, password)
         }
@@ -27,5 +27,15 @@ class RegisterViewModel(
     fun getSignInIntent(): Intent {
         return AuthUI.getInstance().createSignInIntentBuilder()
             .setAvailableProviders(arrayListOf(AuthUI.IdpConfig.GoogleBuilder().build())).build()
+    }
+
+    fun handleSignInResult() {
+        viewModelScope.launch(Dispatchers.IO) {
+            userRepository.handleSignInResult()
+        }
+    }
+
+    fun resetStatus() {
+        status.value = ResponseStatus.IDLE
     }
 }

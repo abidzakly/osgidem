@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -18,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseUser
+import org.d3ifcool.medisgo.repository.LocationRepository
 import org.d3ifcool.medisgo.ui.order.OrderScreen
 import org.d3ifcool.medisgo.ui.order.OrderViewModel
 import org.d3ifcool.medisgo.ui.profile.ProfileScreen
@@ -46,16 +48,20 @@ fun AuthedNavGraph(
     userRepository: UserRepository,
     orderRepository: OrderRepository,
     serviceRepository: ServiceRepository,
+    locationRepository: LocationRepository,
 ) {
+    val context = LocalContext.current
     var isHideTopBar by remember { mutableStateOf(false) }
     var isHideBottomBar by remember { mutableStateOf(false) }
 
     val factory =
         ViewModelFactory(
+            app = context.applicationContext as android.app.Application,
             uid = currentUser!!.uid,
             userRepository = userRepository,
             orderRepository = orderRepository,
-            serviceRepository = serviceRepository
+            serviceRepository = serviceRepository,
+            locationRepository = locationRepository,
         )
     var useFab by remember { mutableStateOf(false) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -110,10 +116,13 @@ fun AuthedNavGraph(
                 ) {
                     val serviceListViewModel: ServiceListViewModel = viewModel(factory = factory)
                     ServiceListScreen(
-                        modifier = Modifier.padding(innerPadding),
+                        modifier = Modifier,
+                        topPadding = innerPadding.calculateTopPadding(),
+                        bottomPadding = innerPadding.calculateBottomPadding(),
                         user = currentUser,
                         viewModel = serviceListViewModel,
-                        navController = navController
+                        locationVm = viewModel(factory = factory),
+                        navController = navController,
                     )
                 }
                 composable(

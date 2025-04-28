@@ -26,7 +26,7 @@ fun EmployeeApp(
     val db = Firebase.firestore
     val storage = Firebase.storage
     val auth = FirebaseAuth.getInstance()
-    val userRepository = UserRepository(db, storage, auth)
+    val userRepository = UserRepository(true, db, storage, auth)
 
     if (currentUser == null) {
         NavGraph(modifier = modifier, navController = navController,

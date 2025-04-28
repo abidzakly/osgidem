@@ -27,6 +27,10 @@ val AdlamDisplay = FontFamily(
     Font(R.font.adlamdisplay_regular, FontWeight.Normal),
 )
 
+val Candal = FontFamily(
+    Font(R.font.candal_regular, FontWeight.Normal),
+)
+
 val AppTypography = TextStyle(
     fontWeight = FontWeight.W600,
     fontFamily = Archivo,

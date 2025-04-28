@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.R
 import org.d3ifcool.medisgosh.component.AppCircularLoading
 import org.d3ifcool.medisgosh.component.AppContainer
@@ -48,7 +50,9 @@ import org.d3ifcool.medisgosh.ui.theme.AppBlueColor
 import org.d3ifcool.medisgosh.ui.theme.AppDarkToscaColor
 import org.d3ifcool.medisgosh.ui.theme.AppTypography
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 @Composable
 fun ForgotPasswordScreen(
@@ -65,17 +69,47 @@ fun ForgotPasswordScreen(
     var email by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf(false) }
 
+    val snackbarHostState = rememberSnackbarHostState()
+    val coroutineScope = rememberCoroutineScope()
+
     LaunchedEffect(status) {
         when (status) {
-            AppObjectState.SUCCESS -> {
+            ResponseStatus.SUCCESS -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    status.message ?: "-"
+                )
+                delay(2000)
+                viewModel.resetStatus()
                 onSubmitSuccess()
             }
 
-            else -> AppHelper.toastGenerator(context, strMessage = status.message)
+            ResponseStatus.FAILED -> {
+                FlashMessageHelper.showError(
+                    snackbarHostState, coroutineScope,
+                    status.message ?: "-"
+                )
+                viewModel.resetStatus()
+            }
+
+            else -> null
         }
     }
 
-    AppContainer.Default { innerPadding ->
+    LaunchedEffect(Unit) {
+        FlashMessageHelper.showSuccess(
+            snackbarHostState, coroutineScope,
+            "Menggunakan format @gmail.com"
+        )
+    }
+
+    AppContainer.Default(
+        snackbarHost = {
+            FlashMessageHelper.FlashMessageHost(
+                snackbarHostState,
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -116,23 +150,29 @@ fun ForgotPasswordScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     if (email.isEmpty()) {
-                        AppHelper.toastGenerator(
-                            context,
-                            strMessage = "Pastikan anda telah mengisi data yang diperlukan."
-                        )
+                        coroutineScope.launch {
+                            FlashMessageHelper.showWarning(
+                                snackbarHostState, coroutineScope,
+                                "Pastikan anda telah mengisi data yang diperlukan."
+                            )
+                        }
                         emailError = true
                     } else if (!email.contains("@") || !email.contains(".")) {
-                        AppHelper.toastGenerator(
-                            context,
-                            strMessage = "Pastikan format email sudah benar."
-                        )
+                        coroutineScope.launch {
+                            FlashMessageHelper.showWarning(
+                                snackbarHostState, coroutineScope,
+                                "Pastikan format email sudah benar."
+                            )
+                        }
                         emailError = true
                     } else {
                         if (!AppHelper.isInternetAvailable(context)) {
-                            AppHelper.toastGenerator(
-                                context,
-                                strMessage = "Internet tidak tersedia."
-                            )
+                            coroutineScope.launch {
+                                FlashMessageHelper.showWarning(
+                                    snackbarHostState, coroutineScope,
+                                    "Internet tidak tersedia."
+                                )
+                            }
                         } else {
                             emailError = false
                             viewModel.submitEmail(email)
@@ -144,7 +184,7 @@ fun ForgotPasswordScreen(
                 elevation = buttonElevation(defaultElevation = 5.dp),
                 contentPadding = PaddingValues(vertical = 10.dp)
             ) {
-                if (status == AppObjectState.LOADING) {
+                if (status == ResponseStatus.LOADING) {
                     AppCircularLoading()
                 }
                 AppText.Small15(

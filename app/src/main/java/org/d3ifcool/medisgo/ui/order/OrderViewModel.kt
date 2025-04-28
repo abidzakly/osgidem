@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.model.Order
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.repository.OrderRepository
 
 class OrderViewModel(
@@ -20,10 +20,10 @@ class OrderViewModel(
     var fetchedOrders = mutableStateOf<List<Order>?>(null)
         private set
 
-    var fetchStatus = mutableStateOf(AppObjectState.IDLE)
+    var fetchStatus = mutableStateOf(ResponseStatus.IDLE)
         private set
 
-    var submissionStatus = mutableStateOf(AppObjectState.IDLE)
+    var submissionStatus = mutableStateOf(ResponseStatus.IDLE)
         private set
 
     init {
@@ -31,22 +31,22 @@ class OrderViewModel(
     }
 
     fun observeOrders() {
-        fetchStatus.value = AppObjectState.LOADING
+        fetchStatus.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
             orderRepository.getOrders(
                 isEmployee = false,
                 onDataUpdated = { list ->
                     if (!list.isNullOrEmpty()) {
-                        fetchStatus.value = AppObjectState.SUCCESS
+                        fetchStatus.value = ResponseStatus.SUCCESS
                         originalFetchedOrders.value = list.sortedByDescending { it.createdAt }
                         filterData(0)
                         Log.d("OrderRepo", "Fetched Data: ${fetchedOrders.value}")
                     } else {
-                        fetchStatus.value = AppObjectState.FAILED
+                        fetchStatus.value = ResponseStatus.FAILED
                     }
                 },
                 onError = {
-                    fetchStatus.value = AppObjectState.FAILED.apply {
+                    fetchStatus.value = ResponseStatus.FAILED.apply {
                         updateMessage(it.message)
                     }
                     Log.e("HomeVM", "Error fetching files: ${it.message}", it)
@@ -56,16 +56,16 @@ class OrderViewModel(
     }
 
     fun cancelOrder(order: Order) {
-        submissionStatus.value = AppObjectState.LOADING
+        submissionStatus.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
             submissionStatus.value = orderRepository.cancelOrder(order)
         }
     }
 
-    fun submitPayment(order: Order, bitmap: Bitmap) {
-        submissionStatus.value = AppObjectState.LOADING
+    fun submitPayment(order: Order) {
+        submissionStatus.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
-            submissionStatus.value = orderRepository.submitPayment(order, bitmap)
+            submissionStatus.value = orderRepository.submitPayment(order)
         }
     }
 
@@ -87,7 +87,7 @@ class OrderViewModel(
     }
 
     fun reset() {
-        submissionStatus.value = AppObjectState.IDLE
+        submissionStatus.value = ResponseStatus.IDLE
     }
 
     override fun onCleared() {

@@ -7,17 +7,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.model.User
 import org.d3ifcool.medisgosh.repository.UserRepository
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 
 class ProfileViewModel(
     private val userRepository: UserRepository,
 ) : ViewModel() {
 
-    var fetchStatus = mutableStateOf(AppObjectState.IDLE)
+    var fetchStatus = mutableStateOf(ResponseStatus.IDLE)
         private set
 
-    var submissionStatus = mutableStateOf(AppObjectState.IDLE)
+    var submissionStatus = mutableStateOf(ResponseStatus.IDLE)
         private set
 
     var profileData = mutableStateOf<User?>(null)
@@ -28,15 +28,15 @@ class ProfileViewModel(
     }
 
     fun observeProfileData() {
-        fetchStatus.value = AppObjectState.LOADING
+        fetchStatus.value = ResponseStatus.LOADING
         viewModelScope.launch(Dispatchers.IO) {
             userRepository.getProfileData(
                 onDataUpdated = {
-                    fetchStatus.value = AppObjectState.SUCCESS
+                    fetchStatus.value = ResponseStatus.SUCCESS
                     profileData.value = it
                 },
                 onError = {
-                    fetchStatus.value = AppObjectState.FAILED.apply {
+                    fetchStatus.value = ResponseStatus.FAILED.apply {
                         updateMessage("Failed: ${it.message}")
                     }
                 }
@@ -44,22 +44,11 @@ class ProfileViewModel(
         }
     }
 
-    fun changeProfilePicture(image: ByteArray) {
-        submissionStatus.value = AppObjectState.LOADING
-        viewModelScope.launch(Dispatchers.IO) {
-            submissionStatus.value = userRepository.changePfp(image)
+    fun logout() {
+        submissionStatus.value = ResponseStatus.LOADING
+        viewModelScope.launch {
+            submissionStatus.value = userRepository.signOut()
         }
-    }
-
-    fun editProfile(user: User) {
-        submissionStatus.value = AppObjectState.LOADING
-        viewModelScope.launch(Dispatchers.IO) {
-            submissionStatus.value = userRepository.editProfile(user)
-        }
-    }
-
-    fun resetStatus() {
-        submissionStatus.value = AppObjectState.IDLE
     }
 
     override fun onCleared() {

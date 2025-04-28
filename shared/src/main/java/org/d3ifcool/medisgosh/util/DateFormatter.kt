@@ -8,7 +8,7 @@ import java.util.Locale
 
 class DateFormatter {
     companion object {
-        fun combineDateAndTime(selectedDate: Calendar, timeString: String): Timestamp? {
+        fun combineDateAndTime(selectedDate: Calendar?, timeString: String): Timestamp? {
             return try {
                 // Parse time string
                 val timeFormatter = SimpleDateFormat("hh:mm", Locale.getDefault())
@@ -16,12 +16,12 @@ class DateFormatter {
 
                 // Set parsed time into the Calendar instance
                 time?.let {
-                    selectedDate.set(Calendar.HOUR_OF_DAY, it.hours)
-                    selectedDate.set(Calendar.MINUTE, it.minutes)
-                    selectedDate.set(Calendar.SECOND, 0) // Reset seconds for a clean timestamp
+                    selectedDate?.set(Calendar.HOUR_OF_DAY, it.hours)
+                    selectedDate?.set(Calendar.MINUTE, it.minutes)
+                    selectedDate?.set(Calendar.SECOND, 0) // Reset seconds for a clean timestamp
 
                     // Convert to Firebase Timestamp
-                    Timestamp(selectedDate.time)
+                    selectedDate?.let { it1 -> Timestamp(it1.time) }
                 }
             } catch (e: Exception) {
             Log.e("Repo", "Error: ${e.message}", e)

@@ -114,27 +114,8 @@ fun HomeScreen(
                 ),
                 color = AppDarkBlueColor,
                 fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = onClicked,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AppToscaColor,
-                    contentColor = Color.White
-                ),
-                elevation = buttonElevation(
-                    defaultElevation = 4.dp
-                )
-            ) {
-                AppText.Small14(
-                    text = if (isEmployee) stringResource(R.string.button_lihat_antrian) else stringResource(
-                        R.string.button_buat_janji
-                    ),
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
         }
     }
 }

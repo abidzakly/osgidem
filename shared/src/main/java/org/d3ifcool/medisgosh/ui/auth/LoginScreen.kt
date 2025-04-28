@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mail
@@ -30,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,8 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
+import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.R
 import org.d3ifcool.medisgosh.component.AppCircularLoading
 import org.d3ifcool.medisgosh.component.AppContainer
@@ -52,7 +55,9 @@ import org.d3ifcool.medisgosh.ui.theme.AppBlueColor
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
 import org.d3ifcool.medisgosh.ui.theme.AppTypography
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.FlashMessageHelper
+import org.d3ifcool.medisgosh.util.FlashMessageHelper.Companion.rememberSnackbarHostState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 @Composable
 fun LoginScreen(
@@ -70,24 +75,45 @@ fun LoginScreen(
 
     var emailError by remember { mutableStateOf(false) }
     var passwordError by remember { mutableStateOf(false) }
+    val snackbarHostState = rememberSnackbarHostState()
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(status) {
         when (status) {
-            AppObjectState.SUCCESS -> {
-                AppHelper.toastGenerator(context, strMessage = status.message)
+            ResponseStatus.SUCCESS -> {
+                FlashMessageHelper.showSuccess(
+                    snackbarHostState, coroutineScope,
+                    status.message ?: "Berhasil",
+                )
+                viewModel.resetStatus()
             }
-            else -> AppHelper.toastGenerator(context, strMessage = status.message)
+
+            ResponseStatus.FAILED -> {
+                FlashMessageHelper.showError(
+                    snackbarHostState, coroutineScope,
+                    status.message ?: "Gagal",
+                )
+                viewModel.resetStatus()
+            }
+
+            else -> null
         }
     }
 
     AppContainer.Default(
+        snackbarHost = {
+            FlashMessageHelper.FlashMessageHost(
+                snackbarHostState,
+            )
+        },
         modifier = modifier
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 54.dp),
+                .padding(horizontal = 54.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -145,25 +171,30 @@ fun LoginScreen(
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    if (email.isEmpty() || password.isEmpty()) {
-                        AppHelper.toastGenerator(
-                            context,
-                            strMessage = "Pastikan seluruh data telah diisi."
-                        )
+                    if (email.isEmpty()) {
+                        coroutineScope.launch {
+                            FlashMessageHelper.showWarning(
+                                snackbarHostState, coroutineScope,
+                                "Pastikan anda telah mengisi data yang diperlukan."
+                            )
+                        }
                         emailError = true
-                        passwordError = true
                     } else if (!email.contains("@") || !email.contains(".")) {
-                        AppHelper.toastGenerator(
-                            context,
-                            strMessage = "Pastikan format email sudah benar."
-                        )
+                        coroutineScope.launch {
+                            FlashMessageHelper.showWarning(
+                                snackbarHostState, coroutineScope,
+                                "Pastikan format email sudah benar."
+                            )
+                        }
                         emailError = true
                     } else {
                         if (!AppHelper.isInternetAvailable(context)) {
-                            AppHelper.toastGenerator(
-                                context,
-                                strMessage = "Internet tidak tersedia."
-                            )
+                            coroutineScope.launch {
+                                FlashMessageHelper.showWarning(
+                                    snackbarHostState, coroutineScope,
+                                    "Internet tidak tersedia."
+                                )
+                            }
                         } else {
                             emailError = false
                             passwordError = false
@@ -175,7 +206,7 @@ fun LoginScreen(
                 shape = RoundedCornerShape(8.dp),
                 elevation = buttonElevation(defaultElevation = 5.dp)
             ) {
-                if (status == AppObjectState.LOADING) {
+                if (status == ResponseStatus.LOADING) {
                     AppCircularLoading()
                 }
                 AppText.Small15(
@@ -200,10 +231,17 @@ fun LoginScreen(
                 val launcher = rememberLauncherForActivityResult(contract) { result ->
                     if (result.resultCode == Activity.RESULT_OK) {
                         // Firebase Authentication successful
-                        AppHelper.toastGenerator(context, strMessage = "Login Berhasil")
+                        FlashMessageHelper.showSuccess(
+                            snackbarHostState, coroutineScope,
+                            "Login Berhasil!",
+                        )
+                        viewModel.handleSignInResult()
                     } else {
                         // Handle sign-in failure
-                        AppHelper.toastGenerator(context, strMessage = "Login Gagal.")
+                        FlashMessageHelper.showSuccess(
+                            snackbarHostState, coroutineScope,
+                            "Login Gagal.",
+                        )
                     }
                 }
                 Row(

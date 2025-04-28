@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 import org.d3ifcool.medisgosh.model.User
 import org.d3ifcool.medisgosh.repository.ServiceRepository
 import org.d3ifcool.medisgosh.repository.UserRepository
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 class ServiceListViewModel(
     private val serviceRepository: ServiceRepository,
@@ -20,7 +20,7 @@ class ServiceListViewModel(
     var fetchedData = mutableStateOf<List<User>?>(null)
         private set
 
-    var fetchStatus = mutableStateOf(AppObjectState.IDLE)
+    var fetchStatus = mutableStateOf(ResponseStatus.IDLE)
         private set
 
     var userProfileData = mutableStateOf<User?>(null)
@@ -34,12 +34,12 @@ class ServiceListViewModel(
     fun observeList() {
         viewModelScope.launch(Dispatchers.IO) {
             serviceRepository.getDoctors(onDataUpdated = {
-                fetchStatus.value = AppObjectState.SUCCESS
+                fetchStatus.value = ResponseStatus.SUCCESS
                 fetchedData.value = it
                 Log.d("ServiceListVM", "fetchedData: ${fetchStatus.value}")
             },
                 onError = {
-                    fetchStatus.value = AppObjectState.FAILED.apply {
+                    fetchStatus.value = ResponseStatus.FAILED.apply {
                         updateMessage("Failed: ${it.message}")
                     }
                 }

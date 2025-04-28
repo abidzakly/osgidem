@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,11 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonDefaults.buttonColors
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,10 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import org.d3ifcool.medisgosh.ui.theme.AppDanger
-import org.d3ifcool.medisgosh.ui.theme.AppDarkToscaColor
 import org.d3ifcool.medisgosh.ui.theme.AppToscaColor
-import org.d3ifcool.medisgosh.ui.theme.AppWarning
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 class AppPopUp {
     companion object {
@@ -43,7 +35,7 @@ class AppPopUp {
             label: String,
             negativeLabel: String = "Batal",
             positiveLabel: String = "Ok",
-            submissionStatus: AppObjectState,
+            submissionStatus: ResponseStatus,
             onDismissRequest: () -> Unit,
             onPositiveClicked: () -> Unit
         ) {
@@ -83,7 +75,7 @@ class AppPopUp {
                                 defaultElevation = 4.dp
                             )
                         ) {
-                            if (submissionStatus == AppObjectState.LOADING) {
+                            if (submissionStatus == ResponseStatus.LOADING) {
                                 AppCircularLoading(useSpacer = false)
                             } else {
                                 AppText.Small15(
@@ -102,7 +94,7 @@ class AppPopUp {
                                 defaultElevation = 4.dp
                             )
                         ) {
-                            if (submissionStatus == AppObjectState.LOADING) {
+                            if (submissionStatus == ResponseStatus.LOADING) {
                                 AppCircularLoading(useSpacer = false)
                             } else {
                                 AppText.Small15(

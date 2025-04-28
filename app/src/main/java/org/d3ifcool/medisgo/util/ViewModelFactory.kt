@@ -1,11 +1,14 @@
 package org.d3ifcool.medisgo.util
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import org.d3ifcool.medisgo.repository.LocationRepository
 import org.d3ifcool.medisgo.ui.order.OrderViewModel
 import org.d3ifcool.medisgo.ui.profile.ProfileViewModel
 import org.d3ifcool.medisgo.ui.register.RegisterViewModel
 import org.d3ifcool.medisgo.ui.service.FillOrderViewModel
+import org.d3ifcool.medisgo.ui.service.LocationViewModel
 import org.d3ifcool.medisgo.ui.service.ServiceDetailViewModel
 import org.d3ifcool.medisgo.ui.service.ServiceListViewModel
 import org.d3ifcool.medisgosh.repository.OrderRepository
@@ -21,6 +24,8 @@ class ViewModelFactory(
     private val userRepository: UserRepository? = null,
     private val orderRepository: OrderRepository? = null,
     private val serviceRepository: ServiceRepository? = null,
+    private val locationRepository: LocationRepository? = null,
+    private val app: Application? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("unchecked_cast")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -40,6 +45,8 @@ class ViewModelFactory(
             return ServiceDetailViewModel(serviceRepository!!, doctorId!!) as T
         } else if (modelClass.isAssignableFrom(FillOrderViewModel::class.java)) {
             return FillOrderViewModel(userRepository = userRepository!!, orderRepository = orderRepository!!, doctorId!!) as T
+        } else if (modelClass.isAssignableFrom(LocationViewModel::class.java)) {
+            return LocationViewModel(app = app!!, repo = locationRepository!!) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

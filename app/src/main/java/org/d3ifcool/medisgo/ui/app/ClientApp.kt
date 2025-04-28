@@ -12,6 +12,7 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.storage
 import org.d3ifcool.medisgo.navigation.AuthedNavGraph
 import org.d3ifcool.medisgo.navigation.NavGraph
+import org.d3ifcool.medisgo.repository.LocationRepository
 import org.d3ifcool.medisgosh.repository.OrderRepository
 import org.d3ifcool.medisgosh.repository.ServiceRepository
 import org.d3ifcool.medisgosh.repository.UserRepository
@@ -27,7 +28,7 @@ fun ClientApp(
     val db = Firebase.firestore
     val storage = Firebase.storage
     val auth = FirebaseAuth.getInstance()
-    val userRepository = UserRepository(db, storage, auth)
+    val userRepository = UserRepository(false, db, storage, auth)
 
     if (currentUser == null) {
         NavGraph(
@@ -39,6 +40,7 @@ fun ClientApp(
     currentUser?.let {
         val orderRepository = OrderRepository(db, auth, it.uid, storage)
         val serviceRepository = ServiceRepository(db, storage, auth, it.uid)
+        val locationRepository = LocationRepository(db, auth)
         AuthedNavGraph(
             modifier = modifier,
             navController = navController,
@@ -46,6 +48,7 @@ fun ClientApp(
             userRepository = userRepository,
             orderRepository = orderRepository,
             serviceRepository = serviceRepository,
+            locationRepository = locationRepository,
         )
     }
 }

@@ -66,7 +66,7 @@ import org.d3ifcool.medisgosh.component.AppText
 import org.d3ifcool.medisgosh.component.ImageDialog
 import org.d3ifcool.medisgosh.ui.theme.AppDanger
 import org.d3ifcool.medisgosh.ui.theme.AppLightBlueColor
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 import org.d3ifcool.medisgosh.util.MediaUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,10 +76,11 @@ fun ProfilePrefixComponent(
     user: FirebaseUser?,
     onSelectedImage: (ByteArray?) -> Unit,
     onRefreshParams: () -> Unit,
+    onLogout: () -> Unit = {},
     contentBody: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    var imageLoadStatus by remember { mutableStateOf(AppObjectState.IDLE) }
+    var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
     var showModalBottomSheet by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showImgDialog by remember { mutableStateOf(false) }
@@ -112,9 +113,9 @@ fun ProfilePrefixComponent(
             label = "Apakah anda yakin ingin keluar?",
             negativeLabel = "Tidak",
             positiveLabel = "Ya",
-            submissionStatus = AppObjectState.IDLE,
+            submissionStatus = ResponseStatus.IDLE,
         ) {
-            AuthUI.getInstance().signOut(context)
+            onLogout()
         }
     }
 
@@ -263,7 +264,7 @@ fun ProfilePrefixComponent(
                         }
                     ) {
                         if (user!!.photoUrl == null || user.photoUrl!!.toString()
-                                .isEmpty() || imageLoadStatus == AppObjectState.FAILED
+                                .isEmpty() || imageLoadStatus == ResponseStatus.FAILED
                         ) {
                             Image(
                                 modifier = Modifier.size(100.dp),
@@ -271,7 +272,7 @@ fun ProfilePrefixComponent(
                                 contentDescription = null
                             )
                         } else {
-                            if (imageLoadStatus == AppObjectState.LOADING) {
+                            if (imageLoadStatus == ResponseStatus.LOADING) {
                                 AppCircularLoading(color = Color.Black, size = 30.dp)
                             }
                             AsyncImage(
@@ -281,13 +282,13 @@ fun ProfilePrefixComponent(
                                 model = user.photoUrl.toString(),
                                 contentDescription = "User's Profile Photo",
                                 onLoading = {
-                                    imageLoadStatus = AppObjectState.LOADING
+                                    imageLoadStatus = ResponseStatus.LOADING
                                 },
                                 onError = {
-                                    imageLoadStatus = AppObjectState.FAILED
+                                    imageLoadStatus = ResponseStatus.FAILED
                                 },
                                 onSuccess = {
-                                    imageLoadStatus = AppObjectState.SUCCESS
+                                    imageLoadStatus = ResponseStatus.SUCCESS
                                 }
                             )
                         }

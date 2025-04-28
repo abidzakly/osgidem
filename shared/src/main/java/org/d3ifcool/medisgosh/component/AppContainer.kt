@@ -23,7 +23,7 @@ import androidx.navigation.NavHostController
 import org.d3ifcool.medisgosh.R
 import org.d3ifcool.medisgosh.ui.theme.AppLightBlueColor
 import org.d3ifcool.medisgosh.util.AppHelper
-import org.d3ifcool.medisgosh.util.AppObjectState
+import org.d3ifcool.medisgosh.util.ResponseStatus
 
 class AppContainer {
     companion object {
@@ -73,7 +73,7 @@ class AppContainer {
             onProfileClick: () -> Unit,
             content: @Composable (PaddingValues) -> Unit
         ) {
-            var imageLoadStatus by remember { mutableStateOf(AppObjectState.IDLE) }
+            var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
 
             Box(
                 modifier = Modifier
@@ -144,7 +144,7 @@ class AppContainer {
                     },
                     snackbarHost = snackbarHost,
                     floatingActionButton = {
-                        if (useFab) {
+                        if (useFab && !isEmployee) {
                             FloatingActionButton(
                                 onClick = {
                                     AppHelper.openWhatsAppWithTemplate(
@@ -186,7 +186,7 @@ class AppContainer {
             onProfileClick: () -> Unit,
             content: @Composable (PaddingValues) -> Unit
         ) {
-            var imageLoadStatus by remember { mutableStateOf(AppObjectState.IDLE) }
+            var imageLoadStatus by remember { mutableStateOf(ResponseStatus.IDLE) }
 
             Box(
                 modifier = Modifier
